@@ -1,10 +1,17 @@
 package com.sbancuz.plannh.data;
 
 import java.util.List;
+import java.util.Map;
 
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
 
-public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs, long totalEu) {
+public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
+                                Map<RecipeProperty<?>, Long> propertyTotals) {
+
+    public FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs, long totalEu) {
+        this(netInputs, netOutputs, Map.of(RecipePropertyAPI.TOTAL_EU, totalEu));
+    }
 
     public static class SummaryLine {
 

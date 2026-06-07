@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
 
 import codechicken.nei.PositionedStack;
@@ -20,9 +21,10 @@ public class FlowchartNode {
 
     public String machineName;
     public int durationTicks;
-    public long totalEu;
     public String recipeOwner;
     public int handlerRecipeIndex;
+
+    public final ExtractedProperties properties = new ExtractedProperties();
 
     public FlowchartNode(IRecipeHandler handler, int recipeIndex, int x, int y) {
         this.id = UUID.randomUUID();
@@ -56,9 +58,13 @@ public class FlowchartNode {
             if (ps != null && ps.item != null) this.outputs.add(ps.item.copy());
         }
 
-        int recipeH = handler.getRecipeHeight(recipeIndex);
-        if (recipeH > 0) this.durationTicks = recipeH * 20;
-        if (this.durationTicks <= 0) this.durationTicks = 200;
+        for (RecipePropertyExtractor ex : RecipePropertyAPI.getExtractors()) {
+            if (ex.canHandle(this.recipeOwner)) {
+                this.properties.putAll(ex.extract(handler, recipeIndex));
+            }
+        }
+
+        this.durationTicks = this.properties.get(RecipePropertyAPI.DURATION_TICKS);
     }
 
     /**

@@ -15,6 +15,9 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.FlowchartGraph;
 import com.sbancuz.plannh.data.FlowchartSummary;
+import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+import java.util.Map;
 
 public class FlowchartScreen extends ModularScreen {
 
@@ -98,7 +101,9 @@ public class FlowchartScreen extends ModularScreen {
             if (!s.netOutputs().isEmpty()) {
                 h += 14 + s.netOutputs().size() * 11 + 4;
             }
-            if (s.totalEu() > 0) h += 14;
+            for (Map.Entry<RecipeProperty<?>, Long> entry : s.propertyTotals().entrySet()) {
+                if (entry.getValue() > 0) h += 14;
+            }
             h += 4 + 1 + 10;
             h += 14 + 10 + 10 + 10 + 10 + 10;
             return h;
@@ -140,8 +145,15 @@ public class FlowchartScreen extends ModularScreen {
                 ly += 4;
             }
 
-            if (summary.totalEu() > 0) {
-                GuiDraw.drawText("EU: " + summary.totalEu(), 6, ly, 1.0f, 0x88AAFF, false);
+            for (Map.Entry<RecipeProperty<?>, Long> entry : summary.propertyTotals().entrySet()) {
+                if (entry.getValue() <= 0) continue;
+                String label = entry.getKey().getDisplayName() + ": " + entry.getValue();
+                if (entry.getKey() == RecipePropertyAPI.TOTAL_EU) {
+                    long total = entry.getValue();
+                    int totalNodes = graph.getNodes().size();
+                    label = "Total EU: " + total + "  (" + totalNodes + " machines)";
+                }
+                GuiDraw.drawText(label, 6, ly, 1.0f, 0x88AAFF, false);
                 ly += 14;
             }
 

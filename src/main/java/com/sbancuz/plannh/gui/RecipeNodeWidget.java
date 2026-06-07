@@ -4,6 +4,7 @@ import static org.lwjgl.opengl.GL11.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
@@ -15,6 +16,8 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
@@ -74,7 +77,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private List<ThroughputLine> inputLines = new ArrayList<>();
     private List<ThroughputLine> outputLines = new ArrayList<>();
     private int recipeDurationTicks;
-    private long recipeTotalEu;
     private long lastHandlerUpdate = 0;
 
     public RecipeNodeWidget(FlowchartNode node, CanvasWidget canvas) {
@@ -95,7 +97,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void extractThroughput() {
         recipeDurationTicks = node.durationTicks;
-        recipeTotalEu = node.totalEu;
 
         for (ItemStack stack : node.inputs) {
             if (stack != null && stack.stackSize > 0) {
@@ -369,21 +370,43 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         codechicken.lib.gui.GuiDraw.drawString(durStr, x, y, 0xCCCCCC, false);
         y += 11;
 
+        float[] outputChances = node.properties.get(RecipePropertyAPI.OUTPUT_CHANCES);
+
         for (ThroughputLine line : inputLines) {
             String label = line.count + "x " + line.stack.getDisplayName();
             codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0xAAAAAA, false);
             y += 11;
         }
+        int outIdx = 0;
         for (ThroughputLine line : outputLines) {
             String label = line.count + "x " + line.stack.getDisplayName();
+            if (outputChances != null && outIdx < outputChances.length && outputChances[outIdx] < 0.999f) {
+                label += " (" + Math.round(outputChances[outIdx] * 100) + "%)";
+            }
             codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0xFFFFAA, false);
             y += 11;
+            outIdx++;
         }
-        if (recipeTotalEu > 0) {
-            long euPerTick = recipeDurationTicks > 0 ? recipeTotalEu / recipeDurationTicks : 0;
-            codechicken.lib.gui.GuiDraw
-                .drawString("EU: " + euPerTick + " EU/t (total: " + recipeTotalEu + ")", x, y, 0x88AAFF, false);
+        for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+            RecipeProperty<?> prop = entry.getKey();
+            if (prop == RecipePropertyAPI.DURATION_TICKS) continue;
+            if (prop == RecipePropertyAPI.OUTPUT_CHANCES) continue;
+            String label = formatProperty(prop, entry.getValue());
+            codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0x88AAFF, false);
+            y += 11;
         }
+    }
+
+    private String formatProperty(RecipeProperty<?> prop, Object value) {
+        if (prop == RecipePropertyAPI.TOTAL_EU) {
+            long eu = (Long) value;
+            long euPerTick = recipeDurationTicks > 0 ? eu / recipeDurationTicks : 0;
+            return "EU: " + euPerTick + " EU/t (total: " + eu + ")";
+        }
+        if (prop == RecipePropertyAPI.EU_PER_TICK) {
+            return "EU/t: " + value;
+        }
+        return prop.getDisplayName() + ": " + value;
     }
 
     @Override

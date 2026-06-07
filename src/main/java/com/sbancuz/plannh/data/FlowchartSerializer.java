@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
 
 import com.google.gson.Gson;
@@ -34,11 +35,19 @@ public class FlowchartSerializer {
                 obj.addProperty("y", node.y);
                 obj.addProperty("machine", node.machineName);
                 obj.addProperty("ticks", node.durationTicks);
-                obj.addProperty("eu", node.totalEu);
                 obj.addProperty("recipeOwner", node.recipeOwner);
                 obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
                 obj.add("inputs", itemStackArrayToJson(node.inputs));
                 obj.add("outputs", itemStackArrayToJson(node.outputs));
+
+                if (!node.properties.isEmpty()) {
+                    JsonObject propsObj = new JsonObject();
+                    for (java.util.Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+                        serializeProperty(propsObj, entry.getKey(), entry.getValue());
+                    }
+                    obj.add("properties", propsObj);
+                }
+
                 nodesArray.add(obj);
             }
             root.add("nodes", nodesArray);
@@ -101,14 +110,23 @@ public class FlowchartSerializer {
                     .getAsString();
                 node.durationTicks = obj.get("ticks")
                     .getAsInt();
-                node.totalEu = obj.has("eu") ? obj.get("eu")
-                    .getAsLong() : 0;
                 node.recipeOwner = obj.has("recipeOwner") ? obj.get("recipeOwner")
                     .getAsString() : "";
                 node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
                     .getAsInt() : 0;
                 jsonArrayToItemStacks(obj.getAsJsonArray("inputs"), node.inputs);
                 jsonArrayToItemStacks(obj.getAsJsonArray("outputs"), node.outputs);
+
+                if (obj.has("properties")) {
+                    JsonObject propsObj = obj.getAsJsonObject("properties");
+                    for (RecipeProperty<?> prop : RecipePropertyAPI.getProperties()) {
+                        Object value = prop.deserialize(propsObj);
+                        if (value != null && !value.equals(prop.getDefaultValue())) {
+                            setProperty(node.properties, prop, value);
+                        }
+                    }
+                }
+
                 graph.addNode(node);
             }
 
@@ -135,6 +153,16 @@ public class FlowchartSerializer {
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize flowchart", e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void serializeProperty(JsonObject obj, RecipeProperty<?> prop, Object value) {
+        ((RecipeProperty<T>) prop).serialize(obj, (T) value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void setProperty(ExtractedProperties props, RecipeProperty<?> prop, Object value) {
+        props.set((RecipeProperty<T>) prop, (T) value);
     }
 
     private static JsonArray itemStackArrayToJson(java.util.List<ItemStack> stacks) {

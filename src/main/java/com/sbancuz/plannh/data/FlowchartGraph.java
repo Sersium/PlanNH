@@ -45,9 +45,15 @@ public class FlowchartGraph {
         ArrayList<FlowchartSummary.SummaryLine> netIns = new ArrayList<>();
         ArrayList<FlowchartSummary.SummaryLine> netOuts = new ArrayList<>();
 
-        long eu = 0;
+        Map<RecipeProperty<?>, Long> totals = new HashMap<>();
         for (FlowchartNode node : nodes.values()) {
-            eu += node.totalEu;
+            for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+                RecipeProperty<?> prop = entry.getKey();
+                Object val = entry.getValue();
+                if (val instanceof Number num) {
+                    totals.merge(prop, num.longValue(), Long::sum);
+                }
+            }
             for (int i = 0; i < node.inputs.size(); i++) {
                 ItemStack stack = node.inputs.get(i);
                 if (stack != null && stack.stackSize > 0 && !fulfilledInputs.contains(node.id + ":" + i)) {
@@ -62,7 +68,7 @@ public class FlowchartGraph {
             }
         }
 
-        return new FlowchartSummary(netIns, netOuts, eu);
+        return new FlowchartSummary(netIns, netOuts, totals);
     }
 
     public Collection<FlowchartNode> getNodes() {
