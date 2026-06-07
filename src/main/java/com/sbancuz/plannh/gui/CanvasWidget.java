@@ -30,7 +30,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int PREVIEW_COLOR = Color.argb(180, 255, 200, 80);
 
     @Getter
-    private final FlowchartGraph graph;
+    private FlowchartGraph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
 
     @Getter
@@ -62,6 +62,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void removeNode(UUID nodeId) {
         graph.removeNode(nodeId);
+        rebuildNodeWidgets();
+    }
+
+    public void setGraph(FlowchartGraph newGraph) {
+        this.graph = newGraph;
         rebuildNodeWidgets();
     }
 
@@ -251,16 +256,20 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         if (!srcIsFluid) {
             if (srcOutIdx >= itemOutCount || dstInIdx >= itemInCount) return false;
-            ItemStack out = srcNode.outputs.get(srcOutIdx).left();
-            ItemStack in = dstNode.inputs.get(dstInIdx).left();
+            ItemStack out = srcNode.outputs.get(srcOutIdx)
+                .left();
+            ItemStack in = dstNode.inputs.get(dstInIdx)
+                .left();
             return out != null && in != null && out.isItemEqual(in);
         }
 
         int srcFluidIdx = srcOutIdx - itemOutCount;
         int dstFluidIdx = dstInIdx - itemInCount;
         if (srcFluidIdx >= fluidOutCount || dstFluidIdx >= fluidInCount) return false;
-        FluidStack out = srcNode.fluidOutputs.get(srcFluidIdx).left();
-        FluidStack in = dstNode.fluidInputs.get(dstFluidIdx).left();
+        FluidStack out = srcNode.fluidOutputs.get(srcFluidIdx)
+            .left();
+        FluidStack in = dstNode.fluidInputs.get(dstFluidIdx)
+            .left();
         return out != null && in != null && out.isFluidEqual(in);
     }
 

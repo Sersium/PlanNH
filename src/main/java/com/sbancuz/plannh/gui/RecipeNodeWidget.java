@@ -5,10 +5,9 @@ import static org.lwjgl.opengl.GL11.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import codechicken.nei.util.FavoriteStorage;
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.ItemStack;
 
+import net.minecraft.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -22,33 +21,18 @@ import com.sbancuz.plannh.data.FlowchartBalancer.BalanceResult;
 import com.sbancuz.plannh.data.FlowchartBalancer.NodeBalance;
 import com.sbancuz.plannh.data.FlowchartNode;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.SettingDef;
 
-import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
 import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiCraftingRecipe;
-import codechicken.nei.recipe.ICraftingHandler;
-import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 
 public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable {
-
-    private static class ThroughputLine {
-
-        final ItemStack stack;
-        final int count;
-        final float perSec;
-
-        ThroughputLine(ItemStack stack, int count, float durationSec) {
-            this.stack = stack;
-            this.count = count;
-            this.perSec = durationSec > 0 ? count / durationSec : 0;
-        }
-    }
 
     private static final int BASE_W = 120;
     private static final int BASE_H = 80;
@@ -79,12 +63,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private NEIRecipeWidget neiWidget;
     private String recipeName = "";
     private boolean handlerInitFailed = false;
-    private final List<ThroughputLine> inputLines = new ArrayList<>();
-    private final List<ThroughputLine> outputLines = new ArrayList<>();
-    private int recipeDurationTicks;
     private long lastHandlerUpdate = 0;
     private boolean configOpen = false;
-    private final List<ClickZone> configZones = new java.util.ArrayList<>();
+    private final List<ClickZone> configZones = new ArrayList<>();
 
     private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
 
@@ -109,23 +90,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         resizeForZoom(zoom);
     }
 
-    private void extractThroughput() {
-        recipeDurationTicks = node.durationTicks;
-
-        for (var p : node.inputs) {
-            ItemStack stack = p.left();
-            if (stack != null && stack.stackSize > 0) {
-                inputLines.add(new ThroughputLine(stack, stack.stackSize, 0));
-            }
-        }
-        for (var p : node.outputs) {
-            ItemStack stack = p.left();
-            if (stack != null && stack.stackSize > 0) {
-                outputLines.add(new ThroughputLine(stack, stack.stackSize, 0));
-            }
-        }
-    }
-
     private NodeBalance getNodeBalance() {
         BalanceResult br = canvas.getGraph()
             .balance();
@@ -134,16 +98,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int calcInfoHeight() {
-        int lines = 0;
-        NodeBalance nb = getNodeBalance();
-        int ops = nb != null ? nb.operations : 1;
-        boolean hasEnergy = nb != null && nb.totalEnergy > 0;
-
-        if (ops > 1) lines++;
-        if (recipeDurationTicks > 0) lines++;
-        if (hasEnergy) lines++;
-        lines += inputLines.size() + outputLines.size();
-        lines += node.fluidInputs.size() + node.fluidOutputs.size();
+        int lines = node.inputs.size() + node.outputs.size()
+            + node.fluidInputs.size() + node.fluidOutputs.size();
         return lines * 11 + 6;
     }
 
@@ -162,8 +118,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         this.neiWidget.x = 5;
         this.neiWidget.y = 17;
 
-        this.recipeName = ref.handler.getRecipeName().trim();
-        extractThroughput();
+        this.recipeName = ref.handler.getRecipeName()
+            .trim();
         resizeForZoom(canvas.getZoom());
     }
 
@@ -348,95 +304,74 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int y = 17 + neiWidget.h + 4;
 
         NodeBalance nb = getNodeBalance();
+        float totalSec = 1f;
+        if (nb != null) {
+            totalSec = nb.totalDurationTicks / 20f;
+        }
+        if (totalSec <= 0f) {
+            totalSec = node.durationTicks / 20f;
+        }
+        if (totalSec <= 0f) totalSec = 1f;
 
         int ops = nb != null ? nb.operations : 1;
-        int totalDur = nb != null ? nb.totalDurationTicks : recipeDurationTicks;
-        long totalEnergy = nb != null ? nb.totalEnergy : 0;
+        int tf = 1;
+        if (nb != null) {
+            var eff = node.machineConfig.computeEffect(recipeEUt(), node.durationTicks);
+            tf = eff.throughputFactor();
+        }
 
-        if (ops > 1) {
-            codechicken.lib.gui.GuiDraw.drawString("Operations: " + ops + "\u00d7", x, y, 0x88AAFF, false);
+        for (int i = 0; i < node.inputs.size(); i++) {
+            var pair = node.inputs.get(i);
+            if (pair.left() == null) continue;
+            float total = nb != null && nb.effectiveInputs.containsKey(i)
+                ? nb.effectiveInputs.get(i) : pair.left().stackSize;
+            float rate = total / totalSec;
+            codechicken.lib.gui.GuiDraw.drawString(formatRate(rate) + "/s " + pair.left().getDisplayName(), x, y, 0xAAAAAA, false);
             y += 11;
         }
 
-        if (recipeDurationTicks > 0) {
-            int durPerOp = nb != null ? nb.durationPerOp : recipeDurationTicks;
-            float secPerOp = durPerOp / 20f;
-            String durStr = durPerOp + "t";
-            if (secPerOp > 0) durStr += " (" + String.format("%.1f", secPerOp) + "s)";
-            if (ops > 1) {
-                durStr += "  \u00d7" + ops + " = " + totalDur + "t";
-                float totalSec = totalDur / 20f;
-                if (totalSec > 0) durStr += " (" + String.format("%.1f", totalSec) + "s)";
-            }
-            codechicken.lib.gui.GuiDraw.drawString(durStr, x, y, 0xCCCCCC, false);
-            y += 11;
-        }
-
-        if (totalEnergy > 0) {
-            String energyLabel = "Total Energy: " + formatEnergy(totalEnergy);
-            codechicken.lib.gui.GuiDraw.drawString(energyLabel, x, y, 0x88AAFF, false);
-            y += 11;
-        }
-
-        for (ThroughputLine line : inputLines) {
-            String label = line.count + "x " + line.stack.getDisplayName();
-            codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0xAAAAAA, false);
-            y += 11;
-        }
-        int outIdx = 0;
-        for (ThroughputLine line : outputLines) {
-            String label = line.count + "x " + line.stack.getDisplayName();
-            float chance = node.outputs.get(outIdx)
-                .rightFloat();
+        for (int i = 0; i < node.outputs.size(); i++) {
+            var pair = node.outputs.get(i);
+            if (pair.left() == null) continue;
+            float total = nb != null && nb.effectiveOutputs.containsKey(i)
+                ? nb.effectiveOutputs.get(i) : pair.left().stackSize;
+            float rate = total / totalSec;
+            String label = formatRate(rate) + "/s " + pair.left().getDisplayName();
+            float chance = pair.rightFloat();
             if (chance < 0.999f) {
                 label += " (" + Math.round(chance * 100) + "%)";
             }
             codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0xFFFFAA, false);
             y += 11;
-            outIdx++;
         }
 
-        if (!node.fluidInputs.isEmpty()) {
-            for (var fs : node.fluidInputs) {
-                String label = formatFluidAmount(fs.left().amount) + " "
-                    + fs.left()
-                        .getLocalizedName();
-                codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0x77AAFF, false);
-                y += 11;
-            }
+        for (var fs : node.fluidInputs) {
+            float total = ops * fs.left().amount * fs.rightFloat() * tf;
+            float rate = total / totalSec;
+            codechicken.lib.gui.GuiDraw.drawString(formatRate(rate) + "/s " + fs.left().getLocalizedName(), x, y, 0x77AAFF, false);
+            y += 11;
         }
-        if (!node.fluidOutputs.isEmpty()) {
-            for (var fs : node.fluidOutputs) {
-                String label = formatFluidAmount(fs.left().amount) + " "
-                    + fs.left()
-                        .getLocalizedName();
-                codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0x77FFAA, false);
-                y += 11;
-            }
+        for (var fs : node.fluidOutputs) {
+            float total = ops * fs.left().amount * fs.rightFloat() * tf;
+            float rate = total / totalSec;
+            codechicken.lib.gui.GuiDraw.drawString(formatRate(rate) + "/s " + fs.left().getLocalizedName(), x + 4, y, 0x77FFAA, false);
+            y += 11;
         }
     }
 
-    private String formatProperty(RecipeProperty<?> prop, Object value) {
-        if (prop == RecipePropertyAPI.TOTAL_EU) {
-            long eu = (Long) value;
-            long euPerTick = recipeDurationTicks > 0 ? eu / recipeDurationTicks : 0;
-            return "EU: " + euPerTick + " EU/t (total: " + eu + ")";
-        }
-        if (prop == RecipePropertyAPI.EU_PER_TICK) {
-            return "EU/t: " + value;
-        }
-        return prop.getDisplayName() + ": " + value;
+    private static String formatRate(float rate) {
+        if (rate >= 1000000) return String.format("%.1fM", rate / 1000000);
+        if (rate >= 1000) return String.format("%.0f", rate);
+        if (rate >= 1) return String.format("%.2f", rate);
+        return String.format("%.3f", rate);
     }
 
-    private static String formatEnergy(long energy) {
-        if (energy >= 1000000) return energy / 1000 + "k";
-        if (energy >= 1000) return String.format("%.1fk", energy / 1000.0);
-        return String.valueOf(energy);
-    }
-
-    private static String formatFluidAmount(int mb) {
-        if (mb >= 1000) return (mb / 1000) + "." + ((mb % 1000) / 100) + "B";
-        return mb + "mB";
+    private long recipeEUt() {
+        Long euPerTick = node.properties.get(RecipePropertyAPI.EU_PER_TICK);
+        if (euPerTick != null && euPerTick > 0) return euPerTick;
+        Long totalEu = node.properties.get(RecipePropertyAPI.TOTAL_EU);
+        if (totalEu != null && totalEu > 0 && node.durationTicks > 0) return totalEu / node.durationTicks;
+        return 0;
     }
 
     @Override
@@ -517,36 +452,71 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
     }
 
-    private static String voltageTier(long v) {
-        if (v <= 0) return "";
-        int t = (int) Math.round(Math.log(v / 8.0) / Math.log(4));
-        if (t < 0) return "";
-        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
-            "MAX" };
-        return t < names.length ? names[t] : "T" + t;
-    }
-
-    private static long voltageForTier(int idx) {
-        return (long) (8 * Math.pow(4, idx));
-    }
-
     private String buildConfigBadge() {
         MachineConfig c = node.machineConfig;
+        MachineProfile profile = c.getProfile();
         StringBuilder sb = new StringBuilder();
-        if (c.speedBoostPercent != 100) sb.append("⏱")
-            .append(c.speedBoostPercent)
-            .append("% ");
-        if (c.maxParallel > 1) sb.append("∥")
-            .append(c.maxParallel)
-            .append(" ");
-        if (c.machineCount > 1) sb.append("×")
-            .append(c.machineCount)
-            .append(" ");
-        if (c.machineVoltage > 0) {
-            sb.append(voltageTier(c.machineVoltage));
-            if (c.perfectOC) sb.append("P");
-            sb.append(" ");
+
+        for (SettingDef<?> def : profile.settings()) {
+            Object val = c.settings.get(def.key);
+            if (val == null) continue;
+            if (val.equals(def.defaultValue)) continue;
+
+            if (def.type == Boolean.class) {
+                if (def.key.equals("perfectOC")) sb.append("P");
+                else if (def.key.equals("heatOC")) sb.append("H");
+                else if (def.key.equals("heatDiscount")) sb.append("D");
+                else if (def.key.equals("laserOC")) sb.append("L");
+                else if (def.key.equals("unlimitedSkips")) sb.append("∞T");
+                else if (def.key.equals("noOverclock")) sb.append("NO");
+            } else if (def.type == Integer.class) {
+                if (def.key.equals("speed")) sb.append("⏱")
+                    .append(val)
+                    .append("% ");
+                else if (def.key.equals("parallels")) sb.append("∥")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("machines")) sb.append("×")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("amp")) sb.append("A")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("machineHeat")) sb.append("M")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("recipeHeat")) sb.append("R")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("eutDiscount")) sb.append("D")
+                    .append(val)
+                    .append("% ");
+                else if (def.key.equals("eutIncreasePerOC")) sb.append("EU×")
+                    .append(((Integer) val) / 100)
+                    .append(" ");
+                else if (def.key.equals("durationDecreasePerOC")) sb.append("Spd×")
+                    .append(((Integer) val) / 100)
+                    .append(" ");
+                else if (def.key.equals("maxOverclocks")) sb.append("OC")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("maxRegularOc")) sb.append("Rg")
+                    .append(val)
+                    .append(" ");
+                else if (def.key.equals("maxTierSkips")) sb.append("Sk")
+                    .append(val)
+                    .append(" ");
+            } else if (def.type == String.class && def.key.equals("voltage")) {
+                String vName = (String) val;
+                if (!vName.equals("OFF")) {
+                    sb.append(vName);
+                    boolean poc = c.getBoolean("perfectOC");
+                    if (poc) sb.append("P");
+                    sb.append(" ");
+                }
+            }
         }
+
         if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ' ') {
             sb.setLength(sb.length() - 1);
         }
@@ -559,86 +529,76 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         int x = 8;
         int y0 = 17 + neiWidget.h + 4 + calcInfoHeight();
-
-        int panelH = 6 * 11 + 4;
+        MachineProfile profile = node.machineConfig.getProfile();
+        int settingCount = profile.settings()
+            .size();
+        int panelH = settingCount * 11 + 4;
         codechicken.lib.gui.GuiDraw.drawRect(x - 2, y0 - 2, 170, panelH, 0xAA202020);
 
         MachineConfig c = node.machineConfig;
         int y = y0;
 
-        int tierIdx = c.machineVoltage > 0 ? (int) Math.round(Math.log(c.machineVoltage / 8.0) / Math.log(4)) : -1;
-        y = drawConfigTierField(x, y, "Tier", tierIdx, v -> {
-            c.machineVoltage = v >= 0 ? voltageForTier(v) : 0;
-            onConfigChanged();
-        }, y0);
-
-        y = drawConfigIntField(x, y, "Amp", (int) c.machineAmperage, 1, 64, v -> {
-            c.machineAmperage = v;
-            onConfigChanged();
-        }, y0);
-        y = drawConfigIntField(x, y, "Speed %", c.speedBoostPercent, 10, 10000, v -> {
-            c.speedBoostPercent = v;
-            onConfigChanged();
-        }, y0);
-        y = drawConfigIntField(x, y, "Par  ", c.maxParallel, 1, 4096, v -> {
-            c.maxParallel = v;
-            onConfigChanged();
-        }, y0);
-        y = drawConfigIntField(x, y, "Mach ", c.machineCount, 1, 4096, v -> {
-            c.machineCount = v;
-            onConfigChanged();
-        }, y0);
-
-        String pocLabel = c.perfectOC ? "[\u2713] Perfect OC" : "[  ] Perfect OC";
-        codechicken.lib.gui.GuiDraw.drawString(pocLabel, x, y, c.perfectOC ? 0x88FF88 : 0x888888, false);
-        configZones.add(new ClickZone(x, y, x + 90, y + 10, () -> {
-            c.perfectOC = !c.perfectOC;
-            onConfigChanged();
-        }));
-        y += 11;
+        for (SettingDef<?> def : profile.settings()) {
+            y = drawSetting(x, y, def, c);
+        }
     }
 
-    private int computeConfigPanelHeight() {
-        return configOpen ? 6 * 11 + 8 : 0;
-    }
+    private int drawSetting(int x, int y, SettingDef<?> def, MachineConfig c) {
+        if (def.type == Integer.class) {
+            int val = c.getInt(def.key);
+            return drawConfigIntField(x, y, def.label, val, def.minInt, def.maxInt, v -> {
+                c.setInt(def.key, v);
+                onConfigChanged();
+            });
+        } else if (def.type == Boolean.class) {
+            boolean val = c.getBoolean(def.key);
+            String label = (val ? "[\u2713] " : "[  ] ") + def.label;
+            codechicken.lib.gui.GuiDraw.drawString(label, x, y, val ? 0x88FF88 : 0x888888, false);
+            configZones.add(new ClickZone(x, y, x + 120, y + 10, () -> {
+                c.setBoolean(def.key, !val);
+                onConfigChanged();
+            }));
+            return y + 11;
+        } else if (def.type == String.class && def.hasOptions()) {
+            String val = c.getString(def.key);
+            int optIdx = def.options.indexOf(val);
+            if (optIdx < 0) optIdx = 0;
+            String display = def.label + " " + val;
+            codechicken.lib.gui.GuiDraw.drawString(display, x, y, 0x88FF88, false);
 
-    private int drawConfigTierField(int x, int y, String label, int currentTierIdx,
-        java.util.function.IntConsumer setter, int y0) {
-        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
-            "MAX" };
-        int displayIdx = currentTierIdx >= 0 ? currentTierIdx : 0;
-        String tierName = currentTierIdx >= 0 ? names[Math.min(displayIdx, names.length - 1)] : "OFF";
-        String text = label + " " + tierName;
+            String dec = "[-]", inc = "[+]";
+            int decX = x + 80;
+            int incX = decX + 22;
+            codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, 0xAAAAAA, false);
+            codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, 0xAAAAAA, false);
 
-        String dec = "[-]", inc = "[+]";
-        int decX = x + 60;
-        int incX = decX + 22;
-
-        codechicken.lib.gui.GuiDraw.drawString(text, x, y, currentTierIdx >= 0 ? 0x88FF88 : 0x888888, false);
-        codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, 0xAAAAAA, false);
-        codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, 0xAAAAAA, false);
-
-        configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
-            int cur = node.machineConfig.machineVoltage > 0
-                ? (int) Math.round(Math.log(node.machineConfig.machineVoltage / 8.0) / Math.log(4))
-                : 15;
-            int next = Math.max(-1, cur - 1);
-            setter.accept(next);
-        }));
-        configZones.add(new ClickZone(incX, y, incX + 22, y + 10, () -> {
-            int cur = node.machineConfig.machineVoltage > 0
-                ? (int) Math.round(Math.log(node.machineConfig.machineVoltage / 8.0) / Math.log(4))
-                : -1;
-            int next = Math.min(14, cur + 1);
-            setter.accept(next);
-        }));
-
+            configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
+                int cur = def.options.indexOf(c.getString(def.key));
+                int next = Math.max(0, (cur < 0 ? 0 : cur) - 1);
+                c.setString(def.key, def.options.get(next));
+                onConfigChanged();
+            }));
+            configZones.add(new ClickZone(incX, y, incX + 22, y + 10, () -> {
+                int cur = def.options.indexOf(c.getString(def.key));
+                int next = Math.min(def.options.size() - 1, (cur < 0 ? 0 : cur) + 1);
+                c.setString(def.key, def.options.get(next));
+                onConfigChanged();
+            }));
+            return y + 11;
+        }
         return y + 11;
     }
 
+    private int computeConfigPanelHeight() {
+        if (!configOpen) return 0;
+        MachineProfile profile = node.machineConfig.getProfile();
+        return profile.settings()
+            .size() * 11 + 8;
+    }
+
     private int drawConfigIntField(int x, int y, String label, int value, int min, int max,
-        java.util.function.IntConsumer setter, int y0) {
-        int labelW = 70;
+        java.util.function.IntConsumer setter) {
+        int labelW = 80;
         String dec = "[-]", inc = "[+]";
         int decX = x + labelW;
         int incX = decX + 22;

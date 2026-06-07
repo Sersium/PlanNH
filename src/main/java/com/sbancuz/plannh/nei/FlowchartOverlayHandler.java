@@ -31,9 +31,9 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
 
     private static void addRecipe(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
         FlowchartNode node = new FlowchartNode(handler, recipeIndex, 200, 200);
-        FlowchartGraph graph = PlanAPI.getGraph(firstGui);
+        FlowchartGraph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
-        PlanAPI.saveGraph(graph);
+        PlanAPI.save();
 
         if (firstGui instanceof FlowchartGuiContainer) {
             Object screen = ((FlowchartGuiContainer) firstGui).getScreen();

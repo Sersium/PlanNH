@@ -6,8 +6,6 @@ import java.util.Map;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
-
 public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
     List<FluidSummaryLine> netFluidInputs, List<FluidSummaryLine> netFluidOutputs,
     Map<RecipeProperty<?>, Long> propertyTotals) {

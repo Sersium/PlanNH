@@ -13,4 +13,8 @@ public interface RecipePropertyExtractor {
     boolean canHandle(String recipeOwner);
 
     Map<RecipeProperty<?>, Object> extract(FlowchartNode node, IRecipeHandler handler, int recipeIndex);
+
+    default String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        return "vanilla";
+    }
 }

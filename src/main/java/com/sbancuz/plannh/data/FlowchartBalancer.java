@@ -53,6 +53,13 @@ public class FlowchartBalancer {
             ops.put(node.id, leafNodes.contains(node.id) ? 1 : 0);
         }
 
+        Map<UUID, Integer> throughputFactors = new HashMap<>();
+        for (FlowchartNode node : graph.getNodes()) {
+            MachineConfig cfg = node.machineConfig;
+            var eff = cfg.computeEffect(recipeEUt(node), node.durationTicks);
+            throughputFactors.put(node.id, eff.throughputFactor());
+        }
+
         for (UUID nodeId : reverseTopo) {
             FlowchartNode node = graph.nodes.get(nodeId);
             if (node == null) continue;
@@ -96,17 +103,17 @@ public class FlowchartBalancer {
 
                 MachineConfig cfg = node.machineConfig;
                 MachineConfig tgtCfg = target.machineConfig;
+                int srcThroughput = throughputFactors.get(nodeId);
+                int tgtThroughput = throughputFactors.get(edge.targetNodeId);
 
                 float yield = myOutputCount * outputChance
                     * cfg.outputMultiplier(edge.sourceOutputIndex)
-                    * cfg.maxParallel
-                    * cfg.machineCount;
+                    * srcThroughput;
 
                 float itemsNeeded = targetOps * targetInputCount
                     * inputChance
                     * tgtCfg.inputMultiplier(edge.targetInputIndex)
-                    * tgtCfg.maxParallel
-                    * tgtCfg.machineCount;
+                    * tgtThroughput;
 
                 if (yield <= 0) continue;
 
@@ -131,7 +138,7 @@ public class FlowchartBalancer {
             }
         }
 
-        return buildResult(graph, ops);
+        return buildResult(graph, ops, throughputFactors);
     }
 
     private static List<UUID> topologicalSort(FlowchartGraph graph, Map<UUID, List<FlowchartEdge>> inEdges) {
@@ -180,10 +187,18 @@ public class FlowchartBalancer {
         for (FlowchartNode node : graph.getNodes()) {
             ops.put(node.id, 1);
         }
-        return buildResult(graph, ops);
+        Map<UUID, Integer> throughputFactors = new HashMap<>();
+        for (FlowchartNode node : graph.getNodes()) {
+            throughputFactors.put(
+                node.id,
+                node.machineConfig.computeEffect(recipeEUt(node), node.durationTicks)
+                    .throughputFactor());
+        }
+        return buildResult(graph, ops, throughputFactors);
     }
 
-    private static BalanceResult buildResult(FlowchartGraph graph, Map<UUID, Integer> ops) {
+    private static BalanceResult buildResult(FlowchartGraph graph, Map<UUID, Integer> ops,
+        Map<UUID, Integer> throughputFactors) {
         Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         int totalOps = 0;
@@ -197,9 +212,10 @@ public class FlowchartBalancer {
 
             long recipeEUt = recipeEUt(node);
             int recipeDuration = node.durationTicks;
-            var oc = cfg.computeOverclock(recipeEUt, recipeDuration);
-            long eutPerOp = oc.getConsumption();
-            int durPerOp = oc.getDuration();
+            var eff = cfg.computeEffect(recipeEUt, recipeDuration);
+            long eutPerOp = eff.consumptionEUt();
+            int durPerOp = eff.durationTicks();
+            int throughputFactor = eff.throughputFactor();
 
             long totalEnergy = eutPerOp * durPerOp * opCount;
             int totalDurationTicksForNode = durPerOp * opCount;
@@ -212,8 +228,7 @@ public class FlowchartBalancer {
                 float total = opCount * pair.left().stackSize
                     * pair.rightFloat()
                     * cfg.outputMultiplier(i)
-                    * cfg.maxParallel
-                    * cfg.machineCount;
+                    * throughputFactor;
                 if (total > 0) effOuts.put(i, total);
             }
 
@@ -222,11 +237,7 @@ public class FlowchartBalancer {
                 var pair = node.inputs.get(i);
                 if (pair == null || pair.left() == null || pair.left().stackSize <= 0) continue;
                 int total = Math.round(
-                    opCount * pair.left().stackSize
-                        * pair.rightFloat()
-                        * cfg.inputMultiplier(i)
-                        * cfg.maxParallel
-                        * cfg.machineCount);
+                    opCount * pair.left().stackSize * pair.rightFloat() * cfg.inputMultiplier(i) * throughputFactor);
                 if (total > 0) effIns.put(i, total);
             }
 
@@ -260,8 +271,12 @@ public class FlowchartBalancer {
             NodeBalance nb = nodeBalances.get(node.id);
             MachineConfig cfg = node.machineConfig;
 
+            int nodeOps = ops.get(node.id);
+            int throughputFactor = throughputFactors.getOrDefault(node.id, 1);
+
             for (int i = 0; i < node.inputs.size(); i++) {
-                ItemStack stack = node.inputs.get(i).left();
+                ItemStack stack = node.inputs.get(i)
+                    .left();
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (fulfilledInputs.contains(node.id + ":" + i)) continue;
                 Integer totalCount = nb.effectiveInputs.get(i);
@@ -270,7 +285,8 @@ public class FlowchartBalancer {
                 }
             }
             for (int i = 0; i < node.outputs.size(); i++) {
-                ItemStack stack = node.outputs.get(i).left();
+                ItemStack stack = node.outputs.get(i)
+                    .left();
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (consumedOutputs.contains(node.id + ":" + i)) continue;
                 Float totalCount = nb.effectiveOutputs.get(i);
@@ -279,33 +295,47 @@ public class FlowchartBalancer {
                 }
             }
 
-            int nodeOps = ops.get(node.id);
             for (int i = 0; i < node.fluidInputs.size(); i++) {
-                FluidStack fs = node.fluidInputs.get(i).left();
+                FluidStack fs = node.fluidInputs.get(i)
+                    .left();
                 if (fs == null || fs.amount <= 0) continue;
                 int combinedIdx = node.inputs.size() + i;
                 if (fulfilledInputs.contains(node.id + ":" + combinedIdx)) continue;
-                int total = Math.round(nodeOps * fs.amount * node.fluidInputs.get(i).rightFloat()
-                    * cfg.maxParallel * cfg.machineCount);
+                int total = Math.round(
+                    nodeOps * fs.amount
+                        * node.fluidInputs.get(i)
+                            .rightFloat()
+                        * throughputFactor);
                 if (total > 0) {
                     FlowchartSummary.mergeFluidInto(netFluidInputs, fs, total);
                 }
             }
             for (int i = 0; i < node.fluidOutputs.size(); i++) {
-                FluidStack fs = node.fluidOutputs.get(i).left();
+                FluidStack fs = node.fluidOutputs.get(i)
+                    .left();
                 if (fs == null || fs.amount <= 0) continue;
                 int combinedIdx = node.outputs.size() + i;
                 if (consumedOutputs.contains(node.id + ":" + combinedIdx)) continue;
-                int total = Math.round(nodeOps * fs.amount * node.fluidOutputs.get(i).rightFloat()
-                    * cfg.maxParallel * cfg.machineCount);
+                int total = Math.round(
+                    nodeOps * fs.amount
+                        * node.fluidOutputs.get(i)
+                            .rightFloat()
+                        * throughputFactor);
                 if (total > 0) {
                     FlowchartSummary.mergeFluidInto(netFluidOutputs, fs, total);
                 }
             }
         }
 
-        return new BalanceResult(nodeBalances, netInputs, netOutputs, netFluidInputs, netFluidOutputs,
-            propertyTotals, totalOps, totalDuration);
+        return new BalanceResult(
+            nodeBalances,
+            netInputs,
+            netOutputs,
+            netFluidInputs,
+            netFluidOutputs,
+            propertyTotals,
+            totalOps,
+            totalDuration);
     }
 
     private static long recipeEUt(FlowchartNode node) {
@@ -345,9 +375,8 @@ public class FlowchartBalancer {
         }
     }
 
-    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances,
-        List<FlowchartSummary.SummaryLine> netInputs, List<FlowchartSummary.SummaryLine> netOutputs,
-        List<FlowchartSummary.FluidSummaryLine> netFluidInputs, List<FlowchartSummary.FluidSummaryLine> netFluidOutputs,
-        Map<RecipeProperty<?>, Long> propertyTotals, int totalOperations,
-        int totalDurationTicks) {}
+    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<FlowchartSummary.SummaryLine> netInputs,
+        List<FlowchartSummary.SummaryLine> netOutputs, List<FlowchartSummary.FluidSummaryLine> netFluidInputs,
+        List<FlowchartSummary.FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals,
+        int totalOperations, int totalDurationTicks) {}
 }

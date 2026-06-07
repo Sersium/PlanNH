@@ -2,7 +2,6 @@ package com.sbancuz.plannh.nei;
 
 import net.minecraftforge.common.MinecraftForge;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.Tags;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 
@@ -22,7 +21,6 @@ public class NEIFlowchartConfig implements IConfigureNEI {
 
     @Override
     public void loadConfig() {
-        Compat.init();
         API.registerNEIGuiHandler(new FlowchartGuiHandler());
         MinecraftForge.EVENT_BUS.register(this);
     }

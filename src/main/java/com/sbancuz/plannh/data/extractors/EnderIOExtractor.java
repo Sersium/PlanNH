@@ -8,9 +8,11 @@ import java.util.Map;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.SettingDef;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -45,6 +47,11 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
             f.setAccessible(true);
         } catch (Exception ignored) {}
         MILL_OUTPUT_CHANCE = f;
+    }
+
+    @Override
+    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        return "enderio";
     }
 
     @Override
@@ -89,5 +96,24 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
         }
 
         return props;
+    }
+
+    private static MachineProfile enderIOProfile() {
+        return new MachineProfile(
+            "enderio",
+            "EnderIO",
+            List.of(
+                SettingDef.intDef("speed", "Speed", 100, 10, 10000),
+                SettingDef.intDef("parallels", "Par", 1, 1, 4096),
+                SettingDef.intDef("machines", "Mach", 1, 1, 4096)),
+            EnderIOExtractor::enderIOEffect);
+    }
+
+    private static MachineProfile.EffectResult enderIOEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
+        int speed = MachineProfile.getInt(s, "speed", 100);
+        int parallels = MachineProfile.getInt(s, "parallels", 1);
+        int machines = MachineProfile.getInt(s, "machines", 1);
+        int duration = Math.max(1, Math.round(ctx.recipeDuration() * 100.0f / speed));
+        return new MachineProfile.EffectResult(duration, ctx.recipeEUt(), parallels * machines);
     }
 }

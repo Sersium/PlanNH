@@ -3,24 +3,57 @@ package com.sbancuz.plannh.data;
 import java.util.HashMap;
 import java.util.Map;
 
-import gregtech.api.util.OverclockCalculator;
-import gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace;
-import gregtech.common.tileentities.machines.multi.MTELargeChemicalReactor;
-
 public class MachineConfig {
 
-    public long machineVoltage = 0;
-    public long machineAmperage = 1;
-    public int speedBoostPercent = 100;
-    public int maxParallel = 1;
-    public int machineCount = 1;
-    public boolean perfectOC = false;
-
+    public String profileId = MachineProfileRegistry.defaultId();
+    public final Map<String, Object> settings = new HashMap<>();
     public final Map<Integer, Float> inputConsumption = new HashMap<>();
     public final Map<Integer, Float> outputProductivity = new HashMap<>();
 
-    public float speedFactor() {
-        return speedBoostPercent / 100f;
+    public MachineProfile getProfile() {
+        MachineProfile p = MachineProfileRegistry.get(profileId);
+        return p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
+    }
+
+    public int getInt(String key) {
+        Object v = settings.get(key);
+        return v instanceof Number n ? n.intValue() : 0;
+    }
+
+    public boolean getBoolean(String key) {
+        Object v = settings.get(key);
+        return v instanceof Boolean b && b;
+    }
+
+    public String getString(String key) {
+        Object v = settings.get(key);
+        return v instanceof String s ? s : "";
+    }
+
+    public void setInt(String key, int value) {
+        settings.put(key, value);
+    }
+
+    public void setBoolean(String key, boolean value) {
+        settings.put(key, value);
+    }
+
+    public void setString(String key, String value) {
+        settings.put(key, value);
+    }
+
+    public void initDefaults() {
+        MachineProfile p = getProfile();
+        if (p == null) return;
+        for (SettingDef<?> def : p.settings()) {
+            settings.putIfAbsent(def.key, def.defaultValue);
+        }
+    }
+
+    public MachineProfile.EffectResult computeEffect(long recipeEUt, int recipeDuration) {
+        MachineProfile profile = getProfile();
+        return profile.effectComputer()
+            .compute(settings, new MachineProfile.RecipeContext(recipeEUt, recipeDuration));
     }
 
     public float inputMultiplier(int inputIndex) {
@@ -31,41 +64,23 @@ public class MachineConfig {
         return outputProductivity.getOrDefault(outputIndex, 1.0f);
     }
 
-    public OverclockCalculator computeOverclock(long recipeEUt, int recipeDuration) {
-        var calc = new OverclockCalculator().setRecipeEUt(recipeEUt)
-            .setDuration(recipeDuration);
-
-        if (machineVoltage <= 0 || recipeEUt <= 0 || recipeDuration <= 0) {
-            return calc.calculate();
-        }
-        calc.setEUt(machineVoltage)
-            .setAmperage(machineAmperage)
-            .setDurationModifier(100.0 / speedBoostPercent)
-            .setParallel(maxParallel)
-            .setAmperageOC(true);
-        if (perfectOC) calc.enablePerfectOC();
-        calc.calculate();
-        return calc;
-    }
-
     public boolean hasAnyBoost() {
-        return machineVoltage > 0 || machineAmperage != 1
-            || speedBoostPercent != 100
-            || maxParallel > 1
-            || machineCount > 1
-            || perfectOC
-            || !inputConsumption.isEmpty()
-            || !outputProductivity.isEmpty();
+        if (!MachineProfileRegistry.defaultId()
+            .equals(profileId)) return true;
+        MachineProfile p = getProfile();
+        if (p != null) {
+            for (SettingDef<?> def : p.settings()) {
+                Object val = settings.get(def.key);
+                if (val != null && !val.equals(def.defaultValue)) return true;
+            }
+        }
+        return !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
     }
 
     public MachineConfig copy() {
         MachineConfig c = new MachineConfig();
-        c.machineVoltage = machineVoltage;
-        c.machineAmperage = machineAmperage;
-        c.speedBoostPercent = speedBoostPercent;
-        c.maxParallel = maxParallel;
-        c.machineCount = machineCount;
-        c.perfectOC = perfectOC;
+        c.profileId = profileId;
+        c.settings.putAll(settings);
         c.inputConsumption.putAll(inputConsumption);
         c.outputProductivity.putAll(outputProductivity);
         return c;

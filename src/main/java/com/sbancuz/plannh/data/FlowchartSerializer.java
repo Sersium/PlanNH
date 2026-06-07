@@ -7,11 +7,11 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import codechicken.nei.recipe.Recipe;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -23,6 +23,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
+import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class FlowchartSerializer {
@@ -54,7 +55,7 @@ public class FlowchartSerializer {
 
                 if (!node.properties.isEmpty()) {
                     JsonObject propsObj = new JsonObject();
-                    for (java.util.Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+                    for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                         serializeProperty(propsObj, entry.getKey(), entry.getValue());
                     }
                     obj.add("properties", propsObj);
@@ -122,7 +123,9 @@ public class FlowchartSerializer {
                     .getAsString();
                 node.durationTicks = obj.get("ticks")
                     .getAsInt();
-                node.recipeId = Recipe.RecipeId.of(obj.get("recipeId").getAsJsonObject());
+                node.recipeId = Recipe.RecipeId.of(
+                    obj.get("recipeId")
+                        .getAsJsonObject());
                 node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
                     .getAsInt() : 0;
                 jsonArrayToItemStacks(obj.getAsJsonArray("inputs"), node.inputs);
@@ -263,41 +266,39 @@ public class FlowchartSerializer {
         }
     }
 
-    private static String voltageToTierName(long voltage) {
-        if (voltage <= 0) return "";
-        int tier = (int) Math.round(Math.log(voltage / 8.0) / Math.log(4));
-        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
-            "MAX" };
-        return tier >= 0 && tier < names.length ? names[tier] : "T" + tier;
-    }
-
-    private static long tierNameToVoltage(String name) {
-        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
-            "MAX" };
-        for (int i = 0; i < names.length; i++) {
-            if (names[i].equals(name)) return (long) (8 * Math.pow(4, i));
-        }
-        return 0;
-    }
-
     private static JsonObject machineConfigToJson(MachineConfig cfg) {
         JsonObject obj = new JsonObject();
-        if (cfg.speedBoostPercent != 100) obj.addProperty("speed", cfg.speedBoostPercent);
-        if (cfg.maxParallel != 1) obj.addProperty("par", cfg.maxParallel);
-        if (cfg.machineCount != 1) obj.addProperty("mach", cfg.machineCount);
-        if (cfg.machineVoltage > 0) obj.addProperty("voltage", voltageToTierName(cfg.machineVoltage));
-        if (cfg.machineAmperage != 1) obj.addProperty("amp", cfg.machineAmperage);
-        if (cfg.perfectOC) obj.addProperty("poc", true);
+        MachineProfile profile = cfg.getProfile();
+
+        if (!MachineProfileRegistry.defaultId()
+            .equals(cfg.profileId)) {
+            obj.addProperty("profile", cfg.profileId);
+        }
+
+        if (profile != null) {
+            JsonObject settingsObj = new JsonObject();
+            for (SettingDef<?> def : profile.settings()) {
+                Object val = cfg.settings.get(def.key);
+                if (val == null) continue;
+                if (val.equals(def.defaultValue)) continue;
+                if (val instanceof Boolean b) settingsObj.addProperty(def.key, b);
+                else if (val instanceof Integer i) settingsObj.addProperty(def.key, i);
+                else if (val instanceof String s) settingsObj.addProperty(def.key, s);
+            }
+            if (settingsObj.entrySet()
+                .size() > 0) obj.add("settings", settingsObj);
+        }
+
         if (!cfg.inputConsumption.isEmpty()) {
             JsonArray arr = new JsonArray();
-            for (java.util.Map.Entry<Integer, Float> e : cfg.inputConsumption.entrySet()) {
+            for (Map.Entry<Integer, Float> e : cfg.inputConsumption.entrySet()) {
                 arr.add(new com.google.gson.JsonPrimitive(e.getKey() + ":" + e.getValue()));
             }
             obj.add("inMul", arr);
         }
         if (!cfg.outputProductivity.isEmpty()) {
             JsonArray arr = new JsonArray();
-            for (java.util.Map.Entry<Integer, Float> e : cfg.outputProductivity.entrySet()) {
+            for (Map.Entry<Integer, Float> e : cfg.outputProductivity.entrySet()) {
                 arr.add(new com.google.gson.JsonPrimitive(e.getKey() + ":" + e.getValue()));
             }
             obj.add("outMul", arr);
@@ -306,27 +307,106 @@ public class FlowchartSerializer {
     }
 
     private static void jsonToMachineConfig(JsonObject obj, MachineConfig cfg) {
-        if (obj.has("speed")) cfg.speedBoostPercent = obj.get("speed")
-            .getAsInt();
-        if (obj.has("par")) cfg.maxParallel = obj.get("par")
-            .getAsInt();
-        if (obj.has("mach")) cfg.machineCount = obj.get("mach")
-            .getAsInt();
-        if (obj.has("voltage")) cfg.machineVoltage = tierNameToVoltage(
-            obj.get("voltage")
-                .getAsString());
-        if (obj.has("amp")) cfg.machineAmperage = obj.get("amp")
-            .getAsInt();
-        if (obj.has("poc")) cfg.perfectOC = obj.get("poc")
-            .getAsBoolean();
-        // Legacy migration: if old "oc" field exists, convert to rough voltage
-        if (obj.has("oc") && !obj.has("voltage")) {
-            int oldOc = obj.get("oc")
-                .getAsInt();
-            if (oldOc > 0) {
-                cfg.machineVoltage = 32 * (long) Math.pow(4, oldOc);
+        if (obj.has("profile")) {
+            cfg.profileId = obj.get("profile")
+                .getAsString();
+            if (obj.has("settings")) {
+                JsonObject settingsObj = obj.getAsJsonObject("settings");
+                for (Map.Entry<String, JsonElement> entry : settingsObj.entrySet()) {
+                    JsonElement el = entry.getValue();
+                    if (el.isJsonPrimitive()) {
+                        var prim = el.getAsJsonPrimitive();
+                        if (prim.isBoolean()) cfg.settings.put(entry.getKey(), prim.getAsBoolean());
+                        else if (prim.isNumber()) cfg.settings.put(entry.getKey(), prim.getAsInt());
+                        else cfg.settings.put(entry.getKey(), prim.getAsString());
+                    }
+                }
+            }
+        } else {
+            // Legacy migration: determine profile from old flat fields
+            boolean hasVoltage = obj.has("voltage");
+            boolean hasSpeed = obj.has("speed");
+
+            if (obj.has("oc")) {
+                // Old OC format (pre-voltage tier), treat as GregTech
+                cfg.profileId = "gregtech:basic";
+                int oldOc = obj.get("oc")
+                    .getAsInt();
+                if (oldOc > 0) {
+                    String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV",
+                        "UMV", "UXV", "MAX" };
+                    int tier = oldOc + 1;
+                    if (tier < names.length) {
+                        cfg.settings.put("voltage", names[tier]);
+                    }
+                }
+                if (obj.has("par")) cfg.settings.put(
+                    "parallels",
+                    obj.get("par")
+                        .getAsInt());
+                if (obj.has("mach")) cfg.settings.put(
+                    "machines",
+                    obj.get("mach")
+                        .getAsInt());
+                if (obj.has("speed")) cfg.settings.put(
+                    "speed",
+                    obj.get("speed")
+                        .getAsInt());
+            } else if (hasVoltage) {
+                cfg.profileId = "gregtech:basic";
+                cfg.settings.put(
+                    "voltage",
+                    obj.get("voltage")
+                        .getAsString());
+                if (obj.has("amp")) cfg.settings.put(
+                    "amp",
+                    obj.get("amp")
+                        .getAsInt());
+                if (obj.has("speed")) cfg.settings.put(
+                    "speed",
+                    obj.get("speed")
+                        .getAsInt());
+                if (obj.has("par")) cfg.settings.put(
+                    "parallels",
+                    obj.get("par")
+                        .getAsInt());
+                if (obj.has("mach")) cfg.settings.put(
+                    "machines",
+                    obj.get("mach")
+                        .getAsInt());
+                if (obj.has("poc")) cfg.settings.put(
+                    "perfectOC",
+                    obj.get("poc")
+                        .getAsBoolean());
+            } else if (hasSpeed) {
+                cfg.profileId = "enderio";
+                cfg.settings.put(
+                    "speed",
+                    obj.get("speed")
+                        .getAsInt());
+                if (obj.has("par")) cfg.settings.put(
+                    "parallels",
+                    obj.get("par")
+                        .getAsInt());
+                if (obj.has("mach")) cfg.settings.put(
+                    "machines",
+                    obj.get("mach")
+                        .getAsInt());
+            } else {
+                cfg.profileId = "vanilla";
+                if (obj.has("par")) cfg.settings.put(
+                    "parallels",
+                    obj.get("par")
+                        .getAsInt());
+                if (obj.has("mach")) cfg.settings.put(
+                    "machines",
+                    obj.get("mach")
+                        .getAsInt());
             }
         }
+
+        cfg.initDefaults();
+
         if (obj.has("inMul")) {
             for (JsonElement e : obj.getAsJsonArray("inMul")) {
                 String[] parts = e.getAsString()

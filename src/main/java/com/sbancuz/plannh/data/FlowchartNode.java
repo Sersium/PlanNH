@@ -4,18 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import codechicken.nei.recipe.Recipe;
-import gregtech.common.items.ItemFluidDisplay;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidContainerRegistry;
-import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidContainerItem;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class FlowchartNode {
@@ -72,6 +68,18 @@ public class FlowchartNode {
                 this.properties.putAll(ex.extract(this, handler, recipeIndex));
             }
         }
+
+        for (RecipePropertyExtractor ex : RecipePropertyAPI.getExtractors()) {
+            if (ex.canHandle(handler.getOverlayIdentifier())) {
+                String pid = ex.getProfileId(handler, recipeIndex);
+                if (pid != null && !MachineProfileRegistry.defaultId()
+                    .equals(pid)) {
+                    this.machineConfig.profileId = pid;
+                    break;
+                }
+            }
+        }
+        this.machineConfig.initDefaults();
 
         this.durationTicks = this.properties.get(RecipePropertyAPI.DURATION_TICKS);
     }
