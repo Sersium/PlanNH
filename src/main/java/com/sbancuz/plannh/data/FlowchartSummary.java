@@ -10,10 +10,6 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
     Map<RecipeProperty<?>, Long> propertyTotals) {
 
-    public FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs, long totalEu) {
-        this(netInputs, netOutputs, Map.of(RecipePropertyAPI.TOTAL_EU, totalEu));
-    }
-
     public static class SummaryLine {
 
         public final ItemStack stack;

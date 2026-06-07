@@ -130,7 +130,7 @@ public class FlowchartBalancer {
             }
         }
 
-        return buildResult(graph, ops, outEdges);
+        return buildResult(graph, ops);
     }
 
     private static List<UUID> topologicalSort(FlowchartGraph graph, Map<UUID, List<FlowchartEdge>> inEdges) {
@@ -179,19 +179,10 @@ public class FlowchartBalancer {
         for (FlowchartNode node : graph.getNodes()) {
             ops.put(node.id, 1);
         }
-        Map<UUID, List<FlowchartEdge>> outEdges = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
-            outEdges.put(node.id, new ArrayList<>());
-        }
-        for (FlowchartEdge edge : graph.getEdges()) {
-            outEdges.get(edge.sourceNodeId)
-                .add(edge);
-        }
-        return buildResult(graph, ops, outEdges);
+        return buildResult(graph, ops);
     }
 
-    private static BalanceResult buildResult(FlowchartGraph graph, Map<UUID, Integer> ops,
-        Map<UUID, List<FlowchartEdge>> outEdges) {
+    private static BalanceResult buildResult(FlowchartGraph graph, Map<UUID, Integer> ops) {
         Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         int totalOps = 0;

@@ -146,109 +146,53 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return lines * 11 + 6;
     }
 
-    private int countMatchingOutputs(IRecipeHandler handler, int idx) {
-        int matches = 0;
-        PositionedStack result = handler.getResultStack(idx);
-        if (result != null && result.item != null) {
-            for (var p : node.outputs) {
-                ItemStack saved = p.left();
-                if (saved != null && saved.isItemEqual(result.item)) {
-                    matches++;
-                    break;
-                }
-            }
-        }
-        for (PositionedStack ps : handler.getOtherStacks(idx)) {
-            if (ps != null && ps.item != null) {
-                for (var p : node.outputs) {
-                    ItemStack saved = p.left();
-                    if (saved != null && saved.isItemEqual(ps.item)) {
-                        matches++;
-                        break;
-                    }
-                }
-            }
-        }
-        return matches;
-    }
-
     private void ensureRecipeHandler() {
         if (handlerRef != null || handlerInitFailed) return;
-        if (node.outputs.isEmpty()) {
+
+        if (node.outputs.isEmpty() || node.outputs.getFirst().left() == null) {
             handlerInitFailed = true;
             return;
         }
-        try {
-            ItemStack stack = node.outputs.getFirst()
-                .left();
-            if (stack == null) {
-                handlerInitFailed = true;
-                return;
-            }
-            ArrayList<ICraftingHandler> handlers = GuiCraftingRecipe.getCraftingHandlers("item", stack);
-            if (!handlers.isEmpty()) {
-                ICraftingHandler chosen = null;
-                int chosenIdx = 0;
 
-                if (!node.recipeOwner.isEmpty()) {
-                    for (ICraftingHandler h : handlers) {
-                        String ident = h.getOverlayIdentifier();
-                        if (ident != null && ident.equals(node.recipeOwner)) {
-                            chosen = h;
-                            if (node.handlerRecipeIndex >= 0 && node.handlerRecipeIndex < h.numRecipes()) {
-                                chosenIdx = node.handlerRecipeIndex;
-                            } else {
-                                int bestScore = 0;
-                                for (int idx = 0; idx < h.numRecipes(); idx++) {
-                                    int score = countMatchingOutputs(h, idx);
-                                    if (score > bestScore) {
-                                        bestScore = score;
-                                        chosenIdx = idx;
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
+        ItemStack stack = node.outputs.getFirst().left();
+        ArrayList<ICraftingHandler> handlers = GuiCraftingRecipe.getCraftingHandlers("all", stack);
 
-                if (chosen == null) {
-                    int bestScore = 0;
-                    for (ICraftingHandler h : handlers) {
-                        int n = h.numRecipes();
-                        for (int idx = 0; idx < n; idx++) {
-                            int score = countMatchingOutputs(h, idx);
-                            if (score > bestScore) {
-                                bestScore = score;
-                                chosen = h;
-                                chosenIdx = idx;
-                            }
-                        }
-                    }
-                }
-
-                if (chosen == null) {
-                    handlerInitFailed = true;
-                    return;
-                }
-
-                RecipeHandlerRef ref = RecipeHandlerRef.of(chosen, chosenIdx);
-                handlerRef = ref;
-                neiWidget = new NEIRecipeWidget(ref);
-                neiWidget.showAsWidget(true);
-                neiWidget.x = 5;
-                neiWidget.y = 17;
-                IRecipeHandler h = ref.handler;
-                recipeName = h.getRecipeName()
-                    .trim();
-                extractThroughput();
-                resizeForZoom(canvas.getZoom());
-            } else {
-                handlerInitFailed = true;
-            }
-        } catch (Exception e) {
+        RecipeHandlerRef ref = findExactHandler(handlers);
+        if (ref == null) {
             handlerInitFailed = true;
+            return;
         }
+
+        this.handlerRef = ref;
+        this.neiWidget = new NEIRecipeWidget(ref);
+        this.neiWidget.showAsWidget(true);
+        this.neiWidget.x = 5;
+        this.neiWidget.y = 17;
+
+        this.recipeName = ref.handler.getRecipeName().trim();
+        extractThroughput();
+        resizeForZoom(canvas.getZoom());
+    }
+
+    /**
+     * Directly looks up the exact handler and index saved from the user's click event.
+     */
+    private RecipeHandlerRef findExactHandler(List<ICraftingHandler> handlers) {
+        if (handlers.isEmpty() || node.recipeOwner.isEmpty()) return null;
+
+        for (ICraftingHandler h : handlers) {
+            String ident = h.getOverlayIdentifier();
+
+            // Match the exact NEI category identifier
+            if (ident != null && ident.equals(node.recipeOwner)) {
+                // Validate that the index is within bounds to avoid any crashes
+                if (node.handlerRecipeIndex >= 0 && node.handlerRecipeIndex < h.numRecipes()) {
+                    return RecipeHandlerRef.of(h, node.handlerRecipeIndex);
+                }
+                break;
+            }
+        }
+        return null;
     }
 
     private void setAreaSize(int pw, int ph) {

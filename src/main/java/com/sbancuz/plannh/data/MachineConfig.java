@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import gregtech.api.util.OverclockCalculator;
+import gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace;
+import gregtech.common.tileentities.machines.multi.MTELargeChemicalReactor;
 
 public class MachineConfig {
 

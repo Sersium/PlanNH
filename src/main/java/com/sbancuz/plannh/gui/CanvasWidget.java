@@ -28,12 +28,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int ARROW_COLOR = Color.argb(255, 200, 100, 50);
     private static final int PREVIEW_COLOR = Color.argb(180, 255, 200, 80);
 
+    @Getter
     private final FlowchartGraph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
-
-    public FlowchartGraph getGraph() {
-        return graph;
-    }
 
     @Getter
     private float zoom = 1.0f;
