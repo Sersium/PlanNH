@@ -9,6 +9,7 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.IFluidContainerItem;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -96,7 +97,12 @@ public class FlowchartNode {
     }
 
     private static boolean isFluidContainer(ItemStack stack) {
-        return FluidContainerRegistry.getFluidForFilledItem(stack) != null;
+        if (FluidContainerRegistry.getFluidForFilledItem(stack) != null) return true;
+        if (stack.getItem() instanceof IFluidContainerItem container) {
+            FluidStack held = container.getFluid(stack);
+            return held != null && held.amount > 0;
+        }
+        return false;
     }
 
     private void extractFluidsFromGT(IRecipeHandler handler, int recipeIndex) {

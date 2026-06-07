@@ -252,7 +252,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private void resizeForZoom(float z) {
         if (handlerRef != null) {
             int cw = neiWidget.w + 10;
-            int configH = configOpen ? 88 : 0;
+            int configH = computeConfigPanelHeight();
             int ch = neiWidget.h + 22 + calcInfoHeight() + configH;
             setAreaSize(Math.round((cw + 16) * z), Math.round((ch + 16) * z));
         } else {
@@ -412,11 +412,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
 
         if (recipeDurationTicks > 0) {
-            float sec = totalDur / 20f;
-            String durStr = "Duration: " + totalDur + "t";
-            if (sec > 0) durStr += " (" + String.format("%.1f", sec) + "s)";
+            int durPerOp = nb != null ? nb.durationPerOp : recipeDurationTicks;
+            float secPerOp = durPerOp / 20f;
+            String durStr = durPerOp + "t";
+            if (secPerOp > 0) durStr += " (" + String.format("%.1f", secPerOp) + "s)";
             if (ops > 1) {
-                durStr += "  (\u00d7" + ops + ")";
+                durStr += "  \u00d7" + ops + " = " + totalDur + "t";
+                float totalSec = totalDur / 20f;
+                if (totalSec > 0) durStr += " (" + String.format("%.1f", totalSec) + "s)";
             }
             codechicken.lib.gui.GuiDraw.drawString(durStr, x, y, 0xCCCCCC, false);
             y += 11;
@@ -563,14 +566,26 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
     }
 
+    private static String voltageTier(long v) {
+        if (v <= 0) return "";
+        int t = (int) Math.round(Math.log(v / 8.0) / Math.log(4));
+        if (t < 0) return "";
+        String[] names = {"ULV","LV","MV","HV","EV","IV","LuV","ZPM","UV","UHV","UEV","UIV","UMV","UXV","MAX"};
+        return t < names.length ? names[t] : "T" + t;
+    }
+
+    private static long voltageForTier(int idx) {
+        return (long) (8 * Math.pow(4, idx));
+    }
+
     private String buildConfigBadge() {
         MachineConfig c = node.machineConfig;
         StringBuilder sb = new StringBuilder();
         if (c.speedBoostPercent != 100) sb.append("⏱").append(c.speedBoostPercent).append("% ");
-        if (c.parallels > 1) sb.append("∥").append(c.parallels).append(" ");
+        if (c.maxParallel > 1) sb.append("∥").append(c.maxParallel).append(" ");
         if (c.machineCount > 1) sb.append("×").append(c.machineCount).append(" ");
-        if (c.overclockTiers > 0) {
-            sb.append("⚡OC").append(c.overclockTiers);
+        if (c.machineVoltage > 0) {
+            sb.append(voltageTier(c.machineVoltage));
             if (c.perfectOC) sb.append("P");
             sb.append(" ");
         }
@@ -587,14 +602,27 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int x = 8;
         int y0 = 17 + neiWidget.h + 4 + calcInfoHeight();
 
-        codechicken.lib.gui.GuiDraw.drawRect(x - 2, y0 - 2, 170, 80, 0xAA202020);
+        int panelH = 6 * 11 + 4;
+        codechicken.lib.gui.GuiDraw.drawRect(x - 2, y0 - 2, 170, panelH, 0xAA202020);
 
         MachineConfig c = node.machineConfig;
         int y = y0;
-        y = drawConfigIntField(x, y, "Speed %", c.speedBoostPercent, 10, 10000, v -> c.speedBoostPercent = v, y0);
-        y = drawConfigIntField(x, y, "Parallels", c.parallels, 1, 4096, v -> c.parallels = v, y0);
-        y = drawConfigIntField(x, y, "Machines ", c.machineCount, 1, 4096, v -> c.machineCount = v, y0);
-        y = drawConfigIntField(x, y, "OC tiers", c.overclockTiers, 0, 32, v -> c.overclockTiers = v, y0);
+
+        int tierIdx = c.machineVoltage > 0
+            ? (int) Math.round(Math.log(c.machineVoltage / 8.0) / Math.log(4)) : -1;
+        y = drawConfigTierField(x, y, "Tier", tierIdx, v -> {
+            c.machineVoltage = v >= 0 ? voltageForTier(v) : 0;
+            onConfigChanged();
+        }, y0);
+
+        y = drawConfigIntField(x, y, "Amp", (int) c.machineAmperage, 1, 64,
+            v -> { c.machineAmperage = v; onConfigChanged(); }, y0);
+        y = drawConfigIntField(x, y, "Speed %", c.speedBoostPercent, 10, 10000,
+            v -> { c.speedBoostPercent = v; onConfigChanged(); }, y0);
+        y = drawConfigIntField(x, y, "Par  ", c.maxParallel, 1, 4096,
+            v -> { c.maxParallel = v; onConfigChanged(); }, y0);
+        y = drawConfigIntField(x, y, "Mach ", c.machineCount, 1, 4096,
+            v -> { c.machineCount = v; onConfigChanged(); }, y0);
 
         String pocLabel = c.perfectOC ? "[\u2713] Perfect OC" : "[  ] Perfect OC";
         codechicken.lib.gui.GuiDraw.drawString(pocLabel, x, y, c.perfectOC ? 0x88FF88 : 0x888888, false);
@@ -603,6 +631,41 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             onConfigChanged();
         }));
         y += 11;
+    }
+
+    private int computeConfigPanelHeight() {
+        return configOpen ? 6 * 11 + 8 : 0;
+    }
+
+    private int drawConfigTierField(int x, int y, String label, int currentTierIdx,
+        java.util.function.IntConsumer setter, int y0) {
+        String[] names = {"ULV","LV","MV","HV","EV","IV","LuV","ZPM","UV","UHV","UEV","UIV","UMV","UXV","MAX"};
+        int displayIdx = currentTierIdx >= 0 ? currentTierIdx : 0;
+        String tierName = currentTierIdx >= 0 ? names[Math.min(displayIdx, names.length - 1)] : "OFF";
+        String text = label + " " + tierName;
+
+        String dec = "[-]", inc = "[+]";
+        int decX = x + 60;
+        int incX = decX + 22;
+
+        codechicken.lib.gui.GuiDraw.drawString(text, x, y, currentTierIdx >= 0 ? 0x88FF88 : 0x888888, false);
+        codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, 0xAAAAAA, false);
+        codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, 0xAAAAAA, false);
+
+        configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
+            int cur = node.machineConfig.machineVoltage > 0
+                ? (int) Math.round(Math.log(node.machineConfig.machineVoltage / 8.0) / Math.log(4)) : 15;
+            int next = Math.max(-1, cur - 1);
+            setter.accept(next);
+        }));
+        configZones.add(new ClickZone(incX, y, incX + 22, y + 10, () -> {
+            int cur = node.machineConfig.machineVoltage > 0
+                ? (int) Math.round(Math.log(node.machineConfig.machineVoltage / 8.0) / Math.log(4)) : -1;
+            int next = Math.min(14, cur + 1);
+            setter.accept(next);
+        }));
+
+        return y + 11;
     }
 
     private int drawConfigIntField(int x, int y, String label, int value, int min, int max,
@@ -621,13 +684,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
             if (finalValue > min) {
                 setter.accept(finalValue - 1);
-                onConfigChanged();
             }
         }));
         configZones.add(new ClickZone(incX, y, incX + 22, y + 10, () -> {
             if (finalValue < max) {
                 setter.accept(finalValue + 1);
-                onConfigChanged();
             }
         }));
 

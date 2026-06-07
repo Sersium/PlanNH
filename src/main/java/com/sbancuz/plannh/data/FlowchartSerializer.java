@@ -245,12 +245,28 @@ public class FlowchartSerializer {
         }
     }
 
+    private static String voltageToTierName(long voltage) {
+        if (voltage <= 0) return "";
+        int tier = (int) Math.round(Math.log(voltage / 8.0) / Math.log(4));
+        String[] names = {"ULV","LV","MV","HV","EV","IV","LuV","ZPM","UV","UHV","UEV","UIV","UMV","UXV","MAX"};
+        return tier >= 0 && tier < names.length ? names[tier] : "T" + tier;
+    }
+
+    private static long tierNameToVoltage(String name) {
+        String[] names = {"ULV","LV","MV","HV","EV","IV","LuV","ZPM","UV","UHV","UEV","UIV","UMV","UXV","MAX"};
+        for (int i = 0; i < names.length; i++) {
+            if (names[i].equals(name)) return (long) (8 * Math.pow(4, i));
+        }
+        return 0;
+    }
+
     private static JsonObject machineConfigToJson(MachineConfig cfg) {
         JsonObject obj = new JsonObject();
         if (cfg.speedBoostPercent != 100) obj.addProperty("speed", cfg.speedBoostPercent);
-        if (cfg.parallels != 1) obj.addProperty("par", cfg.parallels);
+        if (cfg.maxParallel != 1) obj.addProperty("par", cfg.maxParallel);
         if (cfg.machineCount != 1) obj.addProperty("mach", cfg.machineCount);
-        if (cfg.overclockTiers != 0) obj.addProperty("oc", cfg.overclockTiers);
+        if (cfg.machineVoltage > 0) obj.addProperty("voltage", voltageToTierName(cfg.machineVoltage));
+        if (cfg.machineAmperage != 1) obj.addProperty("amp", cfg.machineAmperage);
         if (cfg.perfectOC) obj.addProperty("poc", true);
         if (!cfg.inputConsumption.isEmpty()) {
             JsonArray arr = new JsonArray();
@@ -271,10 +287,18 @@ public class FlowchartSerializer {
 
     private static void jsonToMachineConfig(JsonObject obj, MachineConfig cfg) {
         if (obj.has("speed")) cfg.speedBoostPercent = obj.get("speed").getAsInt();
-        if (obj.has("par")) cfg.parallels = obj.get("par").getAsInt();
+        if (obj.has("par")) cfg.maxParallel = obj.get("par").getAsInt();
         if (obj.has("mach")) cfg.machineCount = obj.get("mach").getAsInt();
-        if (obj.has("oc")) cfg.overclockTiers = obj.get("oc").getAsInt();
+        if (obj.has("voltage")) cfg.machineVoltage = tierNameToVoltage(obj.get("voltage").getAsString());
+        if (obj.has("amp")) cfg.machineAmperage = obj.get("amp").getAsInt();
         if (obj.has("poc")) cfg.perfectOC = obj.get("poc").getAsBoolean();
+        // Legacy migration: if old "oc" field exists, convert to rough voltage
+        if (obj.has("oc") && !obj.has("voltage")) {
+            int oldOc = obj.get("oc").getAsInt();
+            if (oldOc > 0) {
+                cfg.machineVoltage = 32 * (long) Math.pow(4, oldOc);
+            }
+        }
         if (obj.has("inMul")) {
             for (JsonElement e : obj.getAsJsonArray("inMul")) {
                 String[] parts = e.getAsString().split(":");

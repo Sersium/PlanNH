@@ -54,7 +54,6 @@ public class FlowchartBalancer {
 
             int currentOps = ops.get(nodeId);
 
-            // Group demand per output port
             Map<Integer, Float> itemsNeededPerPort = new HashMap<>();
             Map<Integer, Float> yieldPerPort = new HashMap<>();
             for (FlowchartEdge edge : outEdges.get(nodeId)) {
@@ -89,11 +88,11 @@ public class FlowchartBalancer {
 
                 float yield = myOutputCount * chance
                     * cfg.outputMultiplier(edge.sourceOutputIndex)
-                    * cfg.parallels * cfg.machineCount;
+                    * cfg.maxParallel * cfg.machineCount;
 
                 float itemsNeeded = targetOps * targetInputCount
                     * tgtCfg.inputMultiplier(edge.targetInputIndex)
-                    * tgtCfg.parallels * tgtCfg.machineCount;
+                    * tgtCfg.maxParallel * tgtCfg.machineCount;
 
                 if (yield <= 0) continue;
 
@@ -185,12 +184,15 @@ public class FlowchartBalancer {
 
             MachineConfig cfg = node.machineConfig;
 
-            long baseEnergy = baseEnergyPerOp(node);
-            long energyPerCycle = cfg.energyPerCycle(baseEnergy);
-            long totalEnergy = energyPerCycle * opCount;
+            long recipeEUt = recipeEUt(node);
+            int recipeDuration = node.durationTicks;
+            MachineConfig.OverclockResult oc = cfg.computeOverclock(recipeEUt, recipeDuration);
+            long eutPerOp = oc.consumptionEUt();
+            int durPerOp = oc.durationTicks();
+            int performedOC = oc.performedOC();
 
-            float durationPerCycle = cfg.durationPerCycle(node.durationTicks);
-            int totalDurationTicksForNode = Math.round(durationPerCycle * opCount);
+            long totalEnergy = eutPerOp * durPerOp * opCount;
+            int totalDurationTicksForNode = durPerOp * opCount;
             totalDuration += totalDurationTicksForNode;
 
             Map<Integer, Float> effOuts = new HashMap<>();
@@ -203,7 +205,7 @@ public class FlowchartBalancer {
                     chance = chances[i];
                 }
                 float total = opCount * stack.stackSize * chance
-                    * cfg.outputMultiplier(i) * cfg.parallels * cfg.machineCount;
+                    * cfg.outputMultiplier(i) * cfg.maxParallel * cfg.machineCount;
                 if (total > 0) effOuts.put(i, total);
             }
 
@@ -212,12 +214,12 @@ public class FlowchartBalancer {
                 ItemStack stack = node.inputs.get(i);
                 if (stack == null || stack.stackSize <= 0) continue;
                 int total = Math.round(opCount * stack.stackSize
-                    * cfg.inputMultiplier(i) * cfg.parallels * cfg.machineCount);
+                    * cfg.inputMultiplier(i) * cfg.maxParallel * cfg.machineCount);
                 if (total > 0) effIns.put(i, total);
             }
 
             nodeBalances.put(node.id, new NodeBalance(
-                opCount, totalDurationTicksForNode, totalEnergy, effOuts, effIns));
+                opCount, totalDurationTicksForNode, totalEnergy, durPerOp, effOuts, effIns));
 
             for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                 RecipeProperty<?> prop = entry.getKey();
@@ -267,9 +269,11 @@ public class FlowchartBalancer {
             propertyTotals, totalOps, totalDuration);
     }
 
-    private static long baseEnergyPerOp(FlowchartNode node) {
+    private static long recipeEUt(FlowchartNode node) {
+        Long euPerTick = node.properties.get(RecipePropertyAPI.EU_PER_TICK);
+        if (euPerTick != null && euPerTick > 0) return euPerTick;
         Long totalEu = node.properties.get(RecipePropertyAPI.TOTAL_EU);
-        if (totalEu != null && totalEu > 0) return totalEu;
+        if (totalEu != null && totalEu > 0 && node.durationTicks > 0) return totalEu / node.durationTicks;
         for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
             RecipeProperty<?> prop = entry.getKey();
             Object val = entry.getValue();
@@ -287,14 +291,16 @@ public class FlowchartBalancer {
         public final int operations;
         public final int totalDurationTicks;
         public final long totalEnergy;
+        public final int durationPerOp;
         public final Map<Integer, Float> effectiveOutputs;
         public final Map<Integer, Integer> effectiveInputs;
 
-        NodeBalance(int operations, int totalDurationTicks, long totalEnergy,
+        NodeBalance(int operations, int totalDurationTicks, long totalEnergy, int durationPerOp,
             Map<Integer, Float> effectiveOutputs, Map<Integer, Integer> effectiveInputs) {
             this.operations = operations;
             this.totalDurationTicks = totalDurationTicks;
             this.totalEnergy = totalEnergy;
+            this.durationPerOp = durationPerOp;
             this.effectiveOutputs = effectiveOutputs;
             this.effectiveInputs = effectiveInputs;
         }
