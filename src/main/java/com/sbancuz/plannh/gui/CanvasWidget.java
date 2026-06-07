@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -21,17 +22,20 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.data.FlowchartEdge;
 import com.sbancuz.plannh.data.FlowchartGraph;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.FlowchartNote;
 
 import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable {
 
-    private static final int ARROW_COLOR = Color.argb(255, 200, 100, 50);
+    private static final int ARROW_COLOR_ITEM = Color.argb(220, 200, 140, 60);
+    private static final int ARROW_COLOR_FLUID = Color.argb(220, 60, 140, 200);
     private static final int PREVIEW_COLOR = Color.argb(180, 255, 200, 80);
 
     @Getter
     private FlowchartGraph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
+    private final Map<UUID, NoteWidget> noteWidgets = new HashMap<>();
 
     @Getter
     private float zoom = 1.0f;
@@ -68,16 +72,32 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void setGraph(FlowchartGraph newGraph) {
         this.graph = newGraph;
         rebuildNodeWidgets();
+        rebuildNoteWidgets();
     }
 
     public void rebuildNodeWidgets() {
         removeAll();
+        editingNoteId = null;
         nodeWidgets.clear();
         for (FlowchartNode node : graph.getNodes()) {
             RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
             widget.syncTransform(zoom, panX, panY);
             nodeWidgets.put(node.id, widget);
             child(widget);
+        }
+        rebuildNoteWidgets();
+    }
+
+    public void rebuildNoteWidgets() {
+        for (NoteWidget nw : noteWidgets.values()) {
+            remove(nw);
+        }
+        noteWidgets.clear();
+        for (FlowchartNote note : graph.notes.values()) {
+            NoteWidget nw = new NoteWidget(note, this);
+            nw.syncTransform(zoom, panX, panY);
+            noteWidgets.put(note.id, nw);
+            child(nw);
         }
     }
 
@@ -87,6 +107,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (node == null) continue;
             RecipeNodeWidget widget = entry.getValue();
             widget.syncTransform(zoom, panX, panY);
+        }
+        updateNotePositions();
+    }
+
+    private void updateNotePositions() {
+        for (NoteWidget nw : noteWidgets.values()) {
+            nw.syncTransform(zoom, panX, panY);
         }
     }
 
@@ -103,6 +130,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (creatingEdge) {
             drawPreviewLine();
         }
+
+        drawHoveredPortLabels();
     }
 
     private int widgetX(RecipeNodeWidget w) {
@@ -123,27 +152,32 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
             if (srcWidget == null || dstWidget == null) continue;
 
+            FlowchartNode srcNode = graph.nodes.get(edge.sourceNodeId);
+            boolean isFluid = srcNode != null && edge.sourceOutputIndex >= srcNode.outputs.size();
+
             int srcX = widgetX(srcWidget) + srcWidget.getArea().width;
             int srcY = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
             int dstX = widgetX(dstWidget);
             int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
 
-            drawArrow(srcX, srcY, dstX, dstY);
+            drawArrow(srcX, srcY, dstX, dstY, isFluid);
         }
     }
 
-    private void drawArrow(int x1, int y1, int x2, int y2) {
+    private void drawArrow(int x1, int y1, int x2, int y2, boolean fluid) {
         int midX = (x1 + x2) / 2;
-        int arrowSize = Math.round(6 * zoom);
-        int thickness = Math.max(1, Math.round(2 * zoom));
+        float as = Math.max(4, 6 * zoom);
+        float thick = Math.max(1, 2 * zoom);
 
-        int r = Color.getRed(ARROW_COLOR);
-        int g = Color.getGreen(ARROW_COLOR);
-        int b = Color.getBlue(ARROW_COLOR);
-        int a = Color.getAlpha(ARROW_COLOR);
+        int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
+        int r = Color.getRed(color);
+        int g = Color.getGreen(color);
+        int b = Color.getBlue(color);
+        int a = Color.getAlpha(color);
 
         Platform.setupDrawColor();
-        GL11.glLineWidth(thickness);
+        GL11.glLineWidth(thick);
+        int ex = Math.round(x2 - as);
         Platform.startDrawing(Platform.DrawMode.LINE_STRIP, Platform.VertexFormat.POS_COLOR, buf -> {
             buf.pos(x1, y1, 0)
                 .color(r, g, b, a)
@@ -154,15 +188,24 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             buf.pos(midX, y2, 0)
                 .color(r, g, b, a)
                 .endVertex();
-            buf.pos(x2, y2, 0)
+            buf.pos(ex, y2, 0)
                 .color(r, g, b, a)
                 .endVertex();
         });
         GL11.glLineWidth(1);
 
-        GuiDraw.drawRect(x2 - arrowSize, y2 - thickness - 1, arrowSize, thickness, ARROW_COLOR);
-        GuiDraw.drawRect(x2 - arrowSize, y2 + 2, arrowSize, thickness, ARROW_COLOR);
-        GuiDraw.drawRect(x2 - arrowSize, y2 - 1, arrowSize + 1, thickness + 2, ARROW_COLOR);
+        float hb = as * 0.35f;
+        Platform.startDrawing(Platform.DrawMode.TRIANGLES, Platform.VertexFormat.POS_COLOR, buf -> {
+            buf.pos(x2, y2, 0)
+                .color(r, g, b, a)
+                .endVertex();
+            buf.pos(ex, Math.round(y2 - hb), 0)
+                .color(r, g, b, a)
+                .endVertex();
+            buf.pos(ex, Math.round(y2 + hb), 0)
+                .color(r, g, b, a)
+                .endVertex();
+        });
     }
 
     private void drawPreviewLine() {
@@ -411,5 +454,165 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
         }
         return false;
+    }
+
+    // ── Notes ──
+
+    public void addNote(int x, int y) {
+        FlowchartNote note = new FlowchartNote(UUID.randomUUID(), x, y);
+        graph.notes.put(note.id, note);
+        NoteWidget nw = new NoteWidget(note, this);
+        nw.syncTransform(zoom, panX, panY);
+        noteWidgets.put(note.id, nw);
+        child(nw);
+    }
+
+    public void removeNote(UUID noteId) {
+        NoteWidget nw = noteWidgets.remove(noteId);
+        if (nw != null) remove(nw);
+        graph.notes.remove(noteId);
+    }
+
+    private UUID editingNoteId = null;
+
+    public void startEditingNote(UUID noteId) {
+        editingNoteId = noteId;
+        for (NoteWidget nw : noteWidgets.values()) {
+            nw.setEditing(nw.getNote().id.equals(noteId));
+        }
+    }
+
+    public void onNoteEditingDone() {
+        editingNoteId = null;
+    }
+
+    @Override
+    public Result onKeyPressed(char typedChar, int keyCode) {
+        if (editingNoteId != null) {
+            NoteWidget nw = noteWidgets.get(editingNoteId);
+            if (nw == null) {
+                editingNoteId = null;
+                return Result.IGNORE;
+            }
+            FlowchartNote note = nw.getNote();
+            if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN) {
+                nw.setEditing(false);
+                return Result.SUCCESS;
+            }
+            if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
+                if (note.text.length() > 0) {
+                    note.text = note.text.substring(0, note.text.length() - 1);
+                }
+                return Result.SUCCESS;
+            }
+            if (typedChar >= 32 && typedChar < 127) {
+                note.text += typedChar;
+                return Result.SUCCESS;
+            }
+            return Result.SUCCESS;
+        }
+        return Result.IGNORE;
+    }
+
+    public FlowchartNote getNoteForEdit() {
+        if (editingNoteId == null) return null;
+        return graph.notes.get(editingNoteId);
+    }
+
+    // ── Hovered port labels ──
+
+    private static final int PORT_S = 8;
+    private static final int PORT_HALF = 4;
+    private static final int PORT_GAP = 6;
+
+    private void drawHoveredPortLabels() {
+        int mx = getContext().getMouseX();
+        int my = getContext().getMouseY();
+        float z = zoom;
+        int ps = Math.round(PORT_S * z);
+        int half = Math.round(PORT_HALF * z);
+
+        for (RecipeNodeWidget w : nodeWidgets.values()) {
+            FlowchartNode node = w.getNode();
+            int wx = widgetX(w);
+            int wy = widgetY(w);
+            int ww = w.getArea().width;
+
+            for (int i = 0; i < node.outputs.size(); i++) {
+                int px = wx + ww - ps;
+                int pcY = wy + portY(i);
+                if (mx >= px && mx < px + ps && my >= pcY - half && my < pcY + half) {
+                    drawPortLabel(
+                        node.outputs.get(i)
+                            .left()
+                            .getDisplayName(),
+                        wx + ww,
+                        pcY,
+                        true,
+                        z);
+                    return;
+                }
+            }
+
+            for (int i = 0; i < node.fluidOutputs.size(); i++) {
+                int fi = node.outputs.size() + i;
+                int px = wx + ww - ps;
+                int pcY = wy + portY(fi);
+                if (mx >= px && mx < px + ps && my >= pcY - half && my < pcY + half) {
+                    drawPortLabel(
+                        node.fluidOutputs.get(i)
+                            .left()
+                            .getLocalizedName(),
+                        wx + ww,
+                        pcY,
+                        true,
+                        z);
+                    return;
+                }
+            }
+
+            for (int i = 0; i < node.inputs.size(); i++) {
+                int pcY = wy + portY(i);
+                if (mx >= wx && mx < wx + ps && my >= pcY - half && my < pcY + half) {
+                    drawPortLabel(
+                        node.inputs.get(i)
+                            .left()
+                            .getDisplayName(),
+                        wx,
+                        pcY,
+                        false,
+                        z);
+                    return;
+                }
+            }
+
+            for (int i = 0; i < node.fluidInputs.size(); i++) {
+                int fi = node.inputs.size() + i;
+                int pcY = wy + portY(fi);
+                if (mx >= wx && mx < wx + ps && my >= pcY - half && my < pcY + half) {
+                    drawPortLabel(
+                        node.fluidInputs.get(i)
+                            .left()
+                            .getLocalizedName(),
+                        wx,
+                        pcY,
+                        false,
+                        z);
+                    return;
+                }
+            }
+        }
+    }
+
+    private static void drawPortLabel(String name, int anchorX, int centerY, boolean rightSide, float z) {
+        if (name.length() > 20) name = name.substring(0, 19) + "\u2026";
+        int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
+        int fh = Math.round(9 * z * 0.9f);
+        int gap = Math.round(PORT_GAP * z);
+        int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
+        int labelY = centerY - fh / 2;
+        int pad = Math.round(2 * z);
+        GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, Color.argb(200, 20, 20, 20));
+        GuiDraw.drawText(name, labelX, labelY, z * 0.9f, 0xFFFFFF, false);
     }
 }

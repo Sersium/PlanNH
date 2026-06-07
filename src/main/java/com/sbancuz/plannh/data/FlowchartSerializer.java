@@ -77,6 +77,17 @@ public class FlowchartSerializer {
             }
             root.add("edges", edgesArray);
 
+            JsonArray notesArray = new JsonArray();
+            for (FlowchartNote note : graph.notes.values()) {
+                JsonObject obj = new JsonObject();
+                obj.addProperty("id", note.id.toString());
+                obj.addProperty("x", note.x);
+                obj.addProperty("y", note.y);
+                obj.addProperty("text", note.text);
+                notesArray.add(obj);
+            }
+            root.add("notes", notesArray);
+
             String json = GSON.toJson(root);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             try (GZIPOutputStream gzip = new GZIPOutputStream(baos);
@@ -168,6 +179,24 @@ public class FlowchartSerializer {
                 int dstIn = obj.get("dstIn")
                     .getAsInt();
                 graph.addEdge(new FlowchartEdge(id, src, dst, srcOut, dstIn));
+            }
+
+            if (root.has("notes")) {
+                JsonArray notesArray = root.getAsJsonArray("notes");
+                for (JsonElement elem : notesArray) {
+                    JsonObject obj = elem.getAsJsonObject();
+                    UUID id = UUID.fromString(
+                        obj.get("id")
+                            .getAsString());
+                    int x = obj.get("x")
+                        .getAsInt();
+                    int y = obj.get("y")
+                        .getAsInt();
+                    FlowchartNote note = new FlowchartNote(id, x, y);
+                    if (obj.has("text")) note.text = obj.get("text")
+                        .getAsString();
+                    graph.notes.put(id, note);
+                }
             }
 
             return graph;

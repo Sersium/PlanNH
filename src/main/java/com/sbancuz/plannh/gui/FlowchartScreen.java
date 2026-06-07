@@ -78,6 +78,14 @@ public class FlowchartScreen extends ModularScreen {
         super.onClose();
     }
 
+    @Override
+    public boolean onKeyPressed(char typedChar, int keyCode) {
+        if (canvas.onKeyPressed(typedChar, keyCode) == Interactable.Result.SUCCESS) {
+            return true;
+        }
+        return super.onKeyPressed(typedChar, keyCode);
+    }
+
     // ─────────────────────────── slot bar ───────────────────────────
 
     private static class SlotBarWidget extends Widget<SlotBarWidget> implements Interactable {
@@ -131,6 +139,10 @@ public class FlowchartScreen extends ModularScreen {
             int dx = w - 15;
             GuiDraw.drawText("\u00d7", dx, 4, 1.0f, 0xFF8888, false);
             zones.add(new ClickZone(dx, y, dx + 14, y + h, this::deleteSlot));
+
+            int nx = w - 44;
+            GuiDraw.drawText("N", nx, 4, 1.0f, 0x88AAFF, false);
+            zones.add(new ClickZone(nx, y, nx + 14, y + h, this::addNote));
         }
 
         private void shiftSlot(int dir) {
@@ -160,6 +172,14 @@ public class FlowchartScreen extends ModularScreen {
             PlanAPI.save();
         }
 
+        private void addNote() {
+            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+            if (cx < 0) cx = 0;
+            if (cy < 0) cy = 0;
+            canvas.addNote(cx, cy);
+        }
+
         @Override
         public Result onMousePressed(int mouseButton) {
             if (mouseButton != 0) return Result.IGNORE;
@@ -180,7 +200,7 @@ public class FlowchartScreen extends ModularScreen {
     private static class SummaryWidget extends Widget<SummaryWidget> implements Interactable {
 
         private static final int WIDTH = 200;
-        private static final int TITLE_H = 16;
+        private static final int TITLE_H = 18;
         private static final int COLLAPSE_W = 20;
 
         private final CanvasWidget canvas;
@@ -263,10 +283,11 @@ public class FlowchartScreen extends ModularScreen {
             int w = a.width;
             int h = a.height;
 
-            GuiDraw.drawRect(0, 0, w, h, Color.argb(40, 40, 40, 220));
-            GuiDraw.drawRect(0, 0, w, TITLE_H, Color.argb(60, 60, 60, 240));
+            GuiDraw.drawRect(0, 0, w, h, Color.argb(45, 30, 30, 35));
+            GuiDraw.drawRect(0, 0, w, TITLE_H, Color.argb(60, 50, 50, 55));
+            GuiDraw.drawRect(0, TITLE_H, w, 1, Color.argb(80, 120, 160, 220));
             GuiDraw.drawText("Summary", 4, 3, 1.0f, 0xFFFFFF, false);
-            GuiDraw.drawText(collapsed ? "[+]" : "\u2212", w - COLLAPSE_W, 3, 1.0f, 0xAAAAAA, false);
+            GuiDraw.drawText(collapsed ? "[+]" : "\u2212", w - COLLAPSE_W, 4, 1.0f, 0xAAAAAA, false);
 
             if (collapsed) return;
 
@@ -276,13 +297,14 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netOutputs()
                 .isEmpty()) {
+                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 180, 140, 60));
                 GuiDraw.drawText(
                     "Products (" + br.netOutputs()
                         .size() + ")",
                     6,
-                    ly,
+                    ly + 1,
                     1.0f,
-                    0xAAAA77,
+                    0xFFCC66,
                     false);
                 ly += 14;
                 for (FlowchartSummary.SummaryLine line : br.netOutputs()) {
@@ -295,13 +317,14 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netInputs()
                 .isEmpty()) {
+                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 80, 160, 80));
                 GuiDraw.drawText(
                     "External Inputs (" + br.netInputs()
                         .size() + ")",
                     6,
-                    ly,
+                    ly + 1,
                     1.0f,
-                    0x77AA77,
+                    0x77DD77,
                     false);
                 ly += 14;
                 for (FlowchartSummary.SummaryLine line : br.netInputs()) {
@@ -314,13 +337,14 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netFluidOutputs()
                 .isEmpty()) {
+                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 60, 140, 180));
                 GuiDraw.drawText(
                     "Fluid Products (" + br.netFluidOutputs()
                         .size() + ")",
                     6,
-                    ly,
+                    ly + 1,
                     1.0f,
-                    0x77AAAA,
+                    0x77DDDD,
                     false);
                 ly += 14;
                 for (var line : br.netFluidOutputs()) {
@@ -333,13 +357,14 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netFluidInputs()
                 .isEmpty()) {
+                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 60, 100, 180));
                 GuiDraw.drawText(
                     "Fluid Inputs (" + br.netFluidInputs()
                         .size() + ")",
                     6,
-                    ly,
+                    ly + 1,
                     1.0f,
-                    0x77AAAA,
+                    0x77AADD,
                     false);
                 ly += 14;
                 for (var line : br.netFluidInputs()) {
@@ -351,7 +376,8 @@ public class FlowchartScreen extends ModularScreen {
             }
 
             if (br.totalOperations() > 0) {
-                GuiDraw.drawText("Operations", 6, ly, 1.0f, 0x88AAFF, false);
+                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 100, 120, 200));
+                GuiDraw.drawText("Operations", 6, ly + 1, 1.0f, 0x88AAFF, false);
                 ly += 14;
                 for (FlowchartNode node : g.getNodes()) {
                     NodeBalance nb = br.nodeBalances()
@@ -382,7 +408,7 @@ public class FlowchartScreen extends ModularScreen {
                 ly += 14;
             }
 
-            GuiDraw.drawRect(0, ly + 4, w, 1, Color.argb(80, 200, 200, 200));
+            GuiDraw.drawRect(2, ly + 4, w - 4, 1, Color.argb(50, 200, 200, 200));
             ly += 10;
             GuiDraw.drawText("Zoom: " + canvas.getZoomPercent() + "%", 6, ly, 0.9f, 0xAAAAAA, false);
             ly += 14;

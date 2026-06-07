@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-
 import net.minecraft.item.ItemStack;
+
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -40,6 +40,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int CLOSE_MARGIN = 2;
     private static final int PORT_SIZE = 8;
     private static final int PORT_HALF = PORT_SIZE / 2;
+    private static final int PORT_SPACING = 18;
+    private static final int PORT_ORIGIN = 10;
 
     private static final DrawableResource BG_TEXTURE = new DrawableBuilder(
         "nei:textures/gui/recipebg.png",
@@ -98,8 +100,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int calcInfoHeight() {
-        int lines = node.inputs.size() + node.outputs.size()
-            + node.fluidInputs.size() + node.fluidOutputs.size();
+        int lines = node.inputs.size() + node.outputs.size() + node.fluidInputs.size() + node.fluidOutputs.size();
         return lines * 11 + 6;
     }
 
@@ -170,12 +171,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             BG_TEXTURE.draw(-4, -4, cw + 8, ch + 8, 9, 9, 9, 9);
 
             glEnable(GL_TEXTURE_2D);
-            codechicken.lib.gui.GuiDraw.drawRect(5, 5, cw - 10, 12, 0x30000000);
+            int titleCol = titleColorForName(recipeName);
+            codechicken.lib.gui.GuiDraw.drawRect(5, 5, cw - 10, 12, titleCol);
+            codechicken.lib.gui.GuiDraw.drawRect(5, 17, cw - 10, 1, Color.argb(60, 255, 255, 255));
             codechicken.lib.gui.GuiDraw.drawStringC(recipeName, neiWidget.w / 2, 7, 0xFFFFFF);
 
             if (node.machineConfig.hasAnyBoost()) {
                 String badge = buildConfigBadge();
-                codechicken.lib.gui.GuiDraw.drawString(badge, 8, 7, 0x88AAFF, false);
+                codechicken.lib.gui.GuiDraw.drawString(badge, 8, 7, 0xAAFFFF, false);
             }
 
             codechicken.lib.gui.GuiDraw.drawString("⚙", cw - 14, 6, configOpen ? 0x88FF88 : 0x888888, false);
@@ -224,8 +227,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int bs = zq(CLOSE_W);
         int bx = w - bs - zq(CLOSE_MARGIN);
         int by = zq(CLOSE_MARGIN);
+        GuiDraw.drawRect(bx - 1, by - 1, bs + 2, bs + 2, Color.argb(80, 200, 40, 40));
+        GuiDraw.drawRect(bx, by, bs, bs, Color.argb(200, 180, 40, 40));
         int inset = zq(2);
-        GuiDraw.drawRect(bx, by, bs, bs, Color.argb(180, 200, 40, 40));
         GuiDraw.drawRect(bx + inset, by + inset, bs - zq(4), bs - zq(4), Color.argb(220, 0, 0, 0));
         codechicken.lib.gui.GuiDraw.drawStringC("x", bx + bs / 2, by + zq(1), 0xFF5555);
     }
@@ -275,28 +279,38 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private void drawPorts() {
         int ps = zq(PORT_SIZE);
         int half = zq(PORT_HALF);
+        float z = canvas.getZoom();
 
         for (int i = 0; i < node.outputs.size(); i++) {
             int px = getArea().width - ps;
-            int py = zq((i + 1) * 18 + 10) - half;
+            int py = portTopY(i, 0, z);
+            GuiDraw.drawRect(px - 1, py - 1, ps + 2, ps + 2, Color.argb(60, 100, 200, 100));
             GuiDraw.drawRect(px, py, ps, ps, Color.argb(220, 100, 200, 100));
         }
 
         for (int i = 0; i < node.inputs.size(); i++) {
-            int py = zq((i + 1) * 18 + 10) - half;
+            int py = portTopY(i, 0, z);
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, Color.argb(60, 100, 100, 200));
             GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 100, 100, 200));
         }
 
         for (int i = 0; i < node.fluidOutputs.size(); i++) {
             int px = getArea().width - ps;
-            int py = zq((node.outputs.size() + i + 1) * 18 + 10) - half;
-            GuiDraw.drawRect(px, py, ps, ps, Color.argb(220, 100, 200, 100));
+            int py = portTopY(i, node.outputs.size(), z);
+            GuiDraw.drawRect(px - 1, py - 1, ps + 2, ps + 2, Color.argb(60, 60, 140, 200));
+            GuiDraw.drawRect(px, py, ps, ps, Color.argb(220, 60, 140, 200));
         }
 
         for (int i = 0; i < node.fluidInputs.size(); i++) {
-            int py = zq((node.inputs.size() + i + 1) * 18 + 10) - half;
-            GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 100, 100, 200));
+            int py = portTopY(i, node.inputs.size(), z);
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, Color.argb(60, 60, 100, 200));
+            GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 60, 100, 200));
         }
+    }
+
+    /** Port top Y relative to widget, for the i-th port after {@code totalBefore} ports. */
+    private int portTopY(int i, int totalBefore, float z) {
+        return Math.round(((totalBefore + i + 1) * PORT_SPACING + PORT_ORIGIN) * z) - zq(PORT_HALF);
     }
 
     private void drawThroughputInfo() {
@@ -323,20 +337,29 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         for (int i = 0; i < node.inputs.size(); i++) {
             var pair = node.inputs.get(i);
             if (pair.left() == null) continue;
-            float total = nb != null && nb.effectiveInputs.containsKey(i)
-                ? nb.effectiveInputs.get(i) : pair.left().stackSize;
+            float total = nb != null && nb.effectiveInputs.containsKey(i) ? nb.effectiveInputs.get(i)
+                : pair.left().stackSize;
             float rate = total / totalSec;
-            codechicken.lib.gui.GuiDraw.drawString(formatRate(rate) + "/s " + pair.left().getDisplayName(), x, y, 0xAAAAAA, false);
+            codechicken.lib.gui.GuiDraw.drawString(
+                formatRate(rate) + "/s "
+                    + pair.left()
+                        .getDisplayName(),
+                x,
+                y,
+                0xAAAAAA,
+                false);
             y += 11;
         }
 
         for (int i = 0; i < node.outputs.size(); i++) {
             var pair = node.outputs.get(i);
             if (pair.left() == null) continue;
-            float total = nb != null && nb.effectiveOutputs.containsKey(i)
-                ? nb.effectiveOutputs.get(i) : pair.left().stackSize;
+            float total = nb != null && nb.effectiveOutputs.containsKey(i) ? nb.effectiveOutputs.get(i)
+                : pair.left().stackSize;
             float rate = total / totalSec;
-            String label = formatRate(rate) + "/s " + pair.left().getDisplayName();
+            String label = formatRate(rate) + "/s "
+                + pair.left()
+                    .getDisplayName();
             float chance = pair.rightFloat();
             if (chance < 0.999f) {
                 label += " (" + Math.round(chance * 100) + "%)";
@@ -348,13 +371,27 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         for (var fs : node.fluidInputs) {
             float total = ops * fs.left().amount * fs.rightFloat() * tf;
             float rate = total / totalSec;
-            codechicken.lib.gui.GuiDraw.drawString(formatRate(rate) + "/s " + fs.left().getLocalizedName(), x, y, 0x77AAFF, false);
+            codechicken.lib.gui.GuiDraw.drawString(
+                formatRate(rate) + "/s "
+                    + fs.left()
+                        .getLocalizedName(),
+                x,
+                y,
+                0x77AAFF,
+                false);
             y += 11;
         }
         for (var fs : node.fluidOutputs) {
             float total = ops * fs.left().amount * fs.rightFloat() * tf;
             float rate = total / totalSec;
-            codechicken.lib.gui.GuiDraw.drawString(formatRate(rate) + "/s " + fs.left().getLocalizedName(), x + 4, y, 0x77FFAA, false);
+            codechicken.lib.gui.GuiDraw.drawString(
+                formatRate(rate) + "/s "
+                    + fs.left()
+                        .getLocalizedName(),
+                x + 4,
+                y,
+                0x77FFAA,
+                false);
             y += 11;
         }
     }
@@ -372,6 +409,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         Long totalEu = node.properties.get(RecipePropertyAPI.TOTAL_EU);
         if (totalEu != null && totalEu > 0 && node.durationTicks > 0) return totalEu / node.durationTicks;
         return 0;
+    }
+
+    private static int titleColorForName(String name) {
+        int hash = name.hashCode();
+        float hue = ((hash * 0.618033988749895f) % 1.0f + 1.0f) % 1.0f;
+        int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+        return Color.argb(200, r, g, b);
     }
 
     @Override

@@ -9,6 +9,7 @@ public class FlowchartGraph {
 
     public final Map<UUID, FlowchartNode> nodes = new HashMap<>();
     public final Map<UUID, FlowchartEdge> edges = new HashMap<>();
+    public final Map<UUID, FlowchartNote> notes = new HashMap<>();
 
     public void addNode(FlowchartNode node) {
         nodes.put(node.id, node);

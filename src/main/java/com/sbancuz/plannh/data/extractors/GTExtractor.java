@@ -221,7 +221,8 @@ public class GTExtractor implements RecipePropertyExtractor {
         return calc;
     }
 
-    private static MachineProfile.EffectResult gtFallback(Map<String, Object> s, MachineProfile.RecipeContext ctx, int parallels, int machines) {
+    private static MachineProfile.EffectResult gtFallback(Map<String, Object> s, MachineProfile.RecipeContext ctx,
+        int parallels, int machines) {
         return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), parallels * machines);
     }
 
