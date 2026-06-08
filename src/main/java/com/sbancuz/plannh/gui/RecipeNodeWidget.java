@@ -179,7 +179,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 codechicken.lib.gui.GuiDraw.drawString(badge, 8, 7, PlannhColors.TEXT_BADGE.getColor(), false);
             }
 
-            codechicken.lib.gui.GuiDraw.drawString("⚙", cw - 14, 6, configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(), false);
+            codechicken.lib.gui.GuiDraw.drawString(
+                "⚙",
+                cw - 14,
+                6,
+                configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(),
+                false);
 
             neiWidget.draw(5, 17);
 
@@ -401,8 +406,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return String.format("%.3f", rate);
     }
 
-
-
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton == 0) {
@@ -491,62 +494,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             if (val == null) continue;
             if (val.equals(def.defaultValue)) continue;
 
-            if (def.type == Boolean.class) {
-                if (def.key.equals("perfectOC")) sb.append("P");
-                else if (def.key.equals("heatOC")) sb.append("H");
-                else if (def.key.equals("heatDiscount")) sb.append("D");
-                else if (def.key.equals("laserOC")) sb.append("L");
-                else if (def.key.equals("unlimitedSkips")) sb.append("∞T");
-                else if (def.key.equals("noOverclock")) sb.append("NO");
-            } else if (def.type == Integer.class) {
-                if (def.key.equals("speed")) sb.append("⏱")
-                    .append(val)
-                    .append("% ");
-                else if (def.key.equals("parallels")) sb.append("∥")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("machines")) sb.append("×")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("amp")) sb.append("A")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("machineHeat")) sb.append("M")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("recipeHeat")) sb.append("R")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("eutDiscount")) sb.append("D")
-                    .append(val)
-                    .append("% ");
-                else if (def.key.equals("eutIncreasePerOC")) sb.append("EU×")
-                    .append(((Integer) val) / 100)
-                    .append(" ");
-                else if (def.key.equals("durationDecreasePerOC")) sb.append("Spd×")
-                    .append(((Integer) val) / 100)
-                    .append(" ");
-                else if (def.key.equals("maxOverclocks")) sb.append("OC")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("maxRegularOc")) sb.append("Rg")
-                    .append(val)
-                    .append(" ");
-                else if (def.key.equals("maxTierSkips")) sb.append("Sk")
-                    .append(val)
-                    .append(" ");
-            } else if (def.type == String.class && def.key.equals("voltage")) {
-                String vName = (String) val;
-                if (!vName.equals("OFF")) {
-                    sb.append(vName);
-                    boolean poc = c.getBoolean("perfectOC");
-                    if (poc) sb.append("P");
-                    sb.append(" ");
-                }
-            }
+            String badge = def.badge(val, c);
+            if (badge == null) continue;
+            sb.append(badge)
+                .append(' ');
         }
 
-        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ' ') {
+        if (!sb.isEmpty()) {
             sb.setLength(sb.length() - 1);
         }
         return sb.toString();
@@ -582,7 +536,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         } else if (def.type == Boolean.class) {
             boolean val = c.getBoolean(def.key);
             String label = (val ? "[\u2713] " : "[  ] ") + def.label;
-            codechicken.lib.gui.GuiDraw.drawString(label, x, y, val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(), false);
+            codechicken.lib.gui.GuiDraw.drawString(
+                label,
+                x,
+                y,
+                val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
+                false);
             configZones.add(new ClickZone(x, y, x + 120, y + 10, () -> {
                 c.setBoolean(def.key, !val);
                 onConfigChanged();

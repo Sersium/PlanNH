@@ -12,7 +12,6 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
@@ -287,7 +286,13 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawRect(0, 0, w, TITLE_H, PlannhColors.SUMMARY_TITLE_BG.getColor());
             GuiDraw.drawRect(0, TITLE_H, w, 1, PlannhColors.SUMMARY_TITLE_LINE.getColor());
             GuiDraw.drawText("Summary", 4, 3, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
-            GuiDraw.drawText(collapsed ? "[+]" : "\u2212", w - COLLAPSE_W, 4, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
+            GuiDraw.drawText(
+                collapsed ? "[+]" : "\u2212",
+                w - COLLAPSE_W,
+                4,
+                1.0f,
+                PlannhColors.TEXT_MUTED.getColor(),
+                false);
 
             if (collapsed) return;
 
@@ -308,8 +313,13 @@ public class FlowchartScreen extends ModularScreen {
                     false);
                 ly += 14;
                 for (Summary.SummaryLine line : br.netOutputs()) {
-                    GuiDraw.drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f,
-                        PlannhColors.ACCENT_AMBER.getColor(), false);
+                    GuiDraw.drawText(
+                        line.totalCount + "x " + line.stack.getDisplayName(),
+                        10,
+                        ly,
+                        0.8f,
+                        PlannhColors.ACCENT_AMBER.getColor(),
+                        false);
                     ly += 11;
                 }
                 ly += 4;
@@ -328,8 +338,13 @@ public class FlowchartScreen extends ModularScreen {
                     false);
                 ly += 14;
                 for (Summary.SummaryLine line : br.netInputs()) {
-                    GuiDraw.drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f,
-                        PlannhColors.TEXT_MUTED.getColor(), false);
+                    GuiDraw.drawText(
+                        line.totalCount + "x " + line.stack.getDisplayName(),
+                        10,
+                        ly,
+                        0.8f,
+                        PlannhColors.TEXT_MUTED.getColor(),
+                        false);
                     ly += 11;
                 }
                 ly += 4;
@@ -383,8 +398,13 @@ public class FlowchartScreen extends ModularScreen {
                     NodeBalance nb = br.nodeBalances()
                         .get(node.id);
                     if (nb == null || nb.operations <= 0) continue;
-                    GuiDraw.drawText("\u00d7" + nb.operations + "  " + node.machineName, 10, ly, 0.8f,
-                        PlannhColors.TEXT_LIGHT.getColor(), false);
+                    GuiDraw.drawText(
+                        "\u00d7" + nb.operations + "  " + node.machineName,
+                        10,
+                        ly,
+                        0.8f,
+                        PlannhColors.TEXT_LIGHT.getColor(),
+                        false);
                     ly += 11;
                 }
                 ly += 4;
@@ -411,8 +431,13 @@ public class FlowchartScreen extends ModularScreen {
 
             GuiDraw.drawRect(2, ly + 4, w - 4, 1, PlannhColors.SEPARATOR_DIM.getColor());
             ly += 10;
-            GuiDraw.drawText("Zoom: " + canvas.getZoomPercent() + "%", 6, ly, 0.9f,
-                PlannhColors.TEXT_MUTED.getColor(), false);
+            GuiDraw.drawText(
+                "Zoom: " + canvas.getZoomPercent() + "%",
+                6,
+                ly,
+                0.9f,
+                PlannhColors.TEXT_MUTED.getColor(),
+                false);
             ly += 14;
             GuiDraw.drawText("[Scroll] zoom", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
             ly += 10;

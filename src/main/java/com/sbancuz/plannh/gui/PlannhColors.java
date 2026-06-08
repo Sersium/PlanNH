@@ -1,7 +1,7 @@
 package com.sbancuz.plannh.gui;
 
-import com.gtnewhorizon.gtnhlib.color.ColorResource;
 import com.cleanroommc.modularui.utils.Color;
+import com.gtnewhorizon.gtnhlib.color.ColorResource;
 
 public class PlannhColors {
 

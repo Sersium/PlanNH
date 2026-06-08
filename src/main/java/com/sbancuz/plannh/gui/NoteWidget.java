@@ -7,7 +7,6 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.flowchart.Note;
 
@@ -75,7 +74,8 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
 
         // Close button
         int cx = w - Math.round(CLOSE_W * z);
-        GuiDraw.drawRect(cx, 0, Math.round(CLOSE_W * z), Math.round(CLOSE_W * z), PlannhColors.NOTE_CLOSE_BG.getColor());
+        GuiDraw
+            .drawRect(cx, 0, Math.round(CLOSE_W * z), Math.round(CLOSE_W * z), PlannhColors.NOTE_CLOSE_BG.getColor());
         int cw = Minecraft.getMinecraft().fontRenderer.getStringWidth("x");
         int txtX = cx + (Math.round(CLOSE_W * z) - cw) / 2;
         GuiDraw.drawText("x", txtX, 2, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
@@ -94,9 +94,13 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
                 PlannhColors.TEXT_DARK.getColor(),
                 false);
         } else {
-            GuiDraw
-                .drawText(note.text.isEmpty() ? "Note" : note.text, pad, Math.round(8 * z), z * 0.9f,
-                    PlannhColors.TEXT_NOTE.getColor(), false);
+            GuiDraw.drawText(
+                note.text.isEmpty() ? "Note" : note.text,
+                pad,
+                Math.round(8 * z),
+                z * 0.9f,
+                PlannhColors.TEXT_NOTE.getColor(),
+                false);
         }
     }
 
