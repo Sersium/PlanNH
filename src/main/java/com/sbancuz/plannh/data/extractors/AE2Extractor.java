@@ -4,11 +4,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.Settings;
 
 import appeng.api.AEApi;
 import appeng.api.features.IGrinderEntry;
@@ -23,23 +27,29 @@ public class AE2Extractor implements RecipePropertyExtractor {
 
     @Override
     public String getModId() {
-        return "appliedenergistics2";
+        return Compat.AE2.modid;
     }
 
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(ENERGY_COST);
+        MachineProfileRegistry.register(
+            MachineProfile.builder("ae2:basic", "AE2 Grinder")
+                .setting(Settings.MACHINES.def())
+                .setting(Settings.ENERGY_PER_TICK.def())
+                .effect(AE2Extractor::simpleEffect)
+                .build());
+    }
+
+    @Override
+    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        return "ae2:basic";
     }
 
     @Override
     public boolean canHandle(String recipeOwner) {
         return "grindstone".equals(recipeOwner);
-    }
-
-    @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return null;
     }
 
     @Override
@@ -57,13 +67,24 @@ public class AE2Extractor implements RecipePropertyExtractor {
         IGrinderEntry entry = AEApi.instance()
             .registries()
             .grinder()
-            .getRecipeForInput(ingredients.get(0).item);
+            .getRecipeForInput(ingredients.getFirst().item);
         if (entry == null) return props;
 
         int energy = entry.getEnergyCost();
         if (energy > 0) {
             props.put(ENERGY_COST, energy);
         }
+
         return props;
+    }
+
+    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
+        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        int rate = MachineProfile.getInt(s, Settings.ENERGY_PER_TICK.key(), 10);
+        int duration = ctx.recipeDuration();
+        if (duration <= 0 && rate > 0 && ctx.recipeEUt() > 0) {
+            duration = Math.max(1, (int)(ctx.recipeEUt() / rate));
+        }
+        return new MachineProfile.EffectResult(duration, ctx.recipeEUt(), machines);
     }
 }

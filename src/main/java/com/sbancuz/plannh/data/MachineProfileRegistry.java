@@ -25,13 +25,13 @@ public class MachineProfileRegistry {
             "vanilla",
             "Vanilla",
             List.of(
-                SettingDef.intDef("parallels", "Par", 1, 1, 4096),
-                SettingDef.intDef("machines", "Mach", 1, 1, 4096)),
+                Settings.PARALLELS.def(),
+                Settings.MACHINES.def()),
             MachineProfileRegistry::vanillaEffect);
     }
 
     private static MachineProfile.EffectResult vanillaEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, "machines", 1);
+        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
     }
 }

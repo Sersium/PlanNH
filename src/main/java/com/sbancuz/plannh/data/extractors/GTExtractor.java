@@ -12,12 +12,14 @@ import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
-import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.util.GTRecipe;
+import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.OverclockCalculator;
+import gregtech.api.util.recipe.Sievert;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
@@ -27,6 +29,12 @@ public class GTExtractor implements RecipePropertyExtractor {
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty
         .intProperty("specialValue", "Special Value", 0);
+    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty
+        .intProperty("bartworks.glassTier", "Glass Tier", 3);
+    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.intProperty("bartworks.sievert", "Sievert", 0);
+    public static final RecipeProperty<Boolean> SIEVERT_EXACT = RecipeProperty
+        .boolProperty("bartworks.sievertExact", "Exact Sievert", false);
+    public static final RecipeProperty<Integer> MASS = RecipeProperty.intProperty("bartworks.mass", "Mass", 0);
 
     @Override
     public String getModId() {
@@ -37,12 +45,14 @@ public class GTExtractor implements RecipePropertyExtractor {
     public void register() {
         RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
+        RecipePropertyAPI.registerProperty(GLASS_TIER);
+        RecipePropertyAPI.registerProperty(SIEVERT);
+        RecipePropertyAPI.registerProperty(SIEVERT_EXACT);
+        RecipePropertyAPI.registerProperty(MASS);
 
         for (MachineProfile p : PROFILES) {
             MachineProfileRegistry.register(p);
         }
-
-        new BartWorksExtractor().register();
     }
 
     // ── declarative profile definition ──
@@ -91,13 +101,13 @@ public class GTExtractor implements RecipePropertyExtractor {
             .effect(new EffectBuilder())
             .build(),
         MachineProfile.builder("gregtech:generator", "GT Generator")
-            .setting(SettingDef.intDef("fuelEfficiency", "Fuel Eff.%", 100, 1, 1000))
-            .setting(SettingDef.intDef("parallels", "Par", 1, 1, 4096))
-            .setting(SettingDef.intDef("machines", "Mach", 1, 1, 4096))
+            .setting(Settings.FUEL_EFFICIENCY.def())
+            .setting(Settings.PARALLELS.def())
+            .setting(Settings.MACHINES.def())
             .effect((s, ctx) -> {
-                int p = MachineProfile.getInt(s, "parallels", 1);
-                int m = MachineProfile.getInt(s, "machines", 1);
-                int eff = MachineProfile.getInt(s, "fuelEfficiency", 100);
+                int p = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+                int m = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+                int eff = MachineProfile.getInt(s, Settings.FUEL_EFFICIENCY.key(), 100);
                 int dur = Math.max(1, Math.round(ctx.recipeDuration() * 100.0f / eff));
                 return new MachineProfile.EffectResult(dur, ctx.recipeEUt(), p * m);
             })
@@ -138,14 +148,9 @@ public class GTExtractor implements RecipePropertyExtractor {
     }
 
     private static final List<ProfileMatcher> PROFILE_MATCHERS = List.of(
-        ProfileMatcher.keyword(
-            "gregtech:ebf",
-            "blastfurnace",
-            "vacfurnace",
-            "alloyblastsmelter",
-            "vacuumfurnace",
-            "digester",
-            "nanochip"),
+        // spotless: off
+        ProfileMatcher.keyword( "gregtech:ebf",
+            "blastfurnace", "vacfurnace", "alloyblastsmelter", "vacuumfurnace", "digester", "nanochip"),
         ProfileMatcher.keyword("gregtech:plasmaforge", "plasmaforge", "fog_"),
         ProfileMatcher.keyword("gregtech:fusion", "fusion"),
         ProfileMatcher.keyword("gregtech:laser", "laserengraver", "precise_assembler"),
@@ -153,34 +158,14 @@ public class GTExtractor implements RecipePropertyExtractor {
         ProfileMatcher.keyword("gregtech:lcr", "largechemicalreactor"),
         ProfileMatcher.keyword("gregtech:distillationtower", "distillationtower"),
         ProfileMatcher.exact("gregtech:generator", "gt.recipe.create-condensate"),
-        ProfileMatcher.keyword(
-            "gregtech:generator",
-            "fuel",
-            "generator",
-            "turbine",
-            "boiler",
-            "RTG",
-            "rocketengine",
-            "htgr",
-            "solartower",
-            "lftr",
-            "condensate"),
-        ProfileMatcher.keyword(
-            "gregtech:fake",
-            "scanner",
-            "massfab",
-            "fake",
-            "assemblyline",
-            "research",
-            "upgrade",
-            "nuke",
-            "computer",
-            "foundry_module",
-            "spaceProject",
-            "nanoforge",
-            "pcbfactory",
-            "purification"),
+        ProfileMatcher.keyword( "gregtech:generator",
+            "fuel", "generator", "turbine", "boiler", "RTG", "rocketengine", "htgr", "solartower",
+            "lftr", "condensate"),
+        ProfileMatcher.keyword( "gregtech:fake",
+            "scanner", "massfab", "fake", "assemblyline", "research", "upgrade", "nuke", "computer",
+            "foundry_module", "spaceProject", "nanoforge", "pcbfactory", "purification"),
         ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
+    // spotless: on
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
@@ -208,7 +193,10 @@ public class GTExtractor implements RecipePropertyExtractor {
             || recipeOwner.startsWith("bw.fuels")
             || recipeOwner.startsWith("gg.recipe")
             || recipeOwner.startsWith("gtnhlanth.recipe")
-            || recipeOwner.startsWith("kubatech");
+            || recipeOwner.startsWith("kubatech")
+            || recipeOwner.equals("bw.recipe.biolab")
+            || recipeOwner.equals("bw.recipe.BacteriaVat")
+            || recipeOwner.equals("bw.recipe.radhatch");
     }
 
     @Override
@@ -229,6 +217,22 @@ public class GTExtractor implements RecipePropertyExtractor {
         props.put(RecipePropertyAPI.DURATION_TICKS, duration);
         props.put(RecipePropertyAPI.EU_PER_TICK, (long) eut);
         props.put(RecipePropertyAPI.TOTAL_EU, (long) eut * duration);
+
+        int glassTier = r.getMetadataOrDefault(GTRecipeConstants.GLASS, 3);
+        if (glassTier != 3) {
+            props.put(GLASS_TIER, glassTier);
+        }
+
+        Sievert sievert = r.getMetadataOrDefault(GTRecipeConstants.SIEVERT, new Sievert(0, false));
+        if (sievert.sievert > 0 || sievert.isExact) {
+            props.put(SIEVERT, sievert.sievert);
+            if (sievert.isExact) props.put(SIEVERT_EXACT, true);
+        }
+
+        int mass = r.getMetadataOrDefault(GTRecipeConstants.MASS, 0);
+        if (mass > 0) {
+            props.put(MASS, mass);
+        }
 
         if (r.mSpecialValue != 0) {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
@@ -305,11 +309,11 @@ public class GTExtractor implements RecipePropertyExtractor {
 
         @Override
         public MachineProfile.EffectResult compute(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-            int parallels = MachineProfile.getInt(s, "parallels", 1);
-            int machines = MachineProfile.getInt(s, "machines", 1);
+            int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+            int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
 
             if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
-                || MachineProfile.getString(s, "voltage", "OFF")
+                || MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
                     .equals("OFF")) {
                 return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), parallels * machines);
             }
@@ -320,14 +324,14 @@ public class GTExtractor implements RecipePropertyExtractor {
             if (forceLaserOC) calc.setLaserOC(true);
 
             if (forceHeat) {
-                int machineHeat = MachineProfile.getInt(s, "machineHeat", 0);
-                if (MachineProfile.getBool(s, "heatOC", true) && machineHeat > 0) {
-                    int recipeHeat = MachineProfile.getInt(s, "recipeHeat", 0);
+                int machineHeat = MachineProfile.getInt(s, Settings.MACHINE_HEAT.key(), 0);
+                if (MachineProfile.getBool(s, Settings.HEAT_OC.key(), true) && machineHeat > 0) {
+                    int recipeHeat = MachineProfile.getInt(s, Settings.RECIPE_HEAT.key(), 0);
                     calc.setHeatOC(true)
                         .setRecipeHeat(recipeHeat > 0 ? recipeHeat : machineHeat)
                         .setMachineHeat(machineHeat);
-                    if (MachineProfile.getBool(s, "heatDiscount", false)) calc.setHeatDiscount(true);
-                    int hdMult = MachineProfile.getInt(s, "heatDiscountMult", 100);
+                    if (MachineProfile.getBool(s, Settings.HEAT_DISCOUNT.key(), false)) calc.setHeatDiscount(true);
+                    int hdMult = MachineProfile.getInt(s, Settings.HEAT_DISCOUNT_MULT.key(), 100);
                     if (hdMult != 100) calc.setHeatDiscountMultiplier(hdMult / 100.0);
                 }
             }
@@ -340,10 +344,10 @@ public class GTExtractor implements RecipePropertyExtractor {
     // ── GT helpers ──
 
     private static OverclockCalculator buildGtCalc(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        long voltage = MachineProfile.tierNameToVoltage(MachineProfile.getString(s, "voltage", "OFF"));
-        long amp = MachineProfile.getInt(s, "amp", 1);
-        int speed = MachineProfile.getInt(s, "speed", 100);
-        int parallels = MachineProfile.getInt(s, "parallels", 1);
+        long voltage = MachineProfile.tierNameToVoltage(MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF"));
+        long amp = MachineProfile.getInt(s, Settings.AMP.key(), 1);
+        int speed = MachineProfile.getInt(s, Settings.SPEED.key(), 100);
+        int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
 
         OverclockCalculator calc = new OverclockCalculator().setRecipeEUt(ctx.recipeEUt())
             .setEUt(voltage)
@@ -353,29 +357,29 @@ public class GTExtractor implements RecipePropertyExtractor {
             .setParallel(parallels)
             .setAmperageOC(true);
 
-        if (MachineProfile.getBool(s, "perfectOC", false)) calc.enablePerfectOC();
-        if (MachineProfile.getBool(s, "laserOC", false)) calc.setLaserOC(true);
-        if (MachineProfile.getBool(s, "noOverclock", false)) calc.setNoOverclock(true);
+        if (MachineProfile.getBool(s, Settings.PERFECT_OC.key(), false)) calc.enablePerfectOC();
+        if (MachineProfile.getBool(s, Settings.LASER_OC.key(), false)) calc.setLaserOC(true);
+        if (MachineProfile.getBool(s, Settings.NO_OVERCLOCK.key(), false)) calc.setNoOverclock(true);
 
-        int eutDisc = MachineProfile.getInt(s, "eutDiscount", 0);
+        int eutDisc = MachineProfile.getInt(s, Settings.EUT_DISCOUNT.key(), 0);
         if (eutDisc > 0) calc.setEUtDiscount(eutDisc / 100.0);
 
-        int ocMult = MachineProfile.getInt(s, "eutIncreasePerOC", 400);
+        int ocMult = MachineProfile.getInt(s, Settings.EUT_INCREASE_PER_OC.key(), 400);
         if (ocMult != 400) calc.setEUtIncreasePerOC(ocMult / 100.0);
 
-        int durMult = MachineProfile.getInt(s, "durationDecreasePerOC", 200);
+        int durMult = MachineProfile.getInt(s, Settings.DURATION_DECREASE_PER_OC.key(), 200);
         if (durMult != 200) calc.setDurationDecreasePerOC(durMult / 100.0);
 
-        int maxOc = MachineProfile.getInt(s, "maxOverclocks", 0);
+        int maxOc = MachineProfile.getInt(s, Settings.MAX_OVERCLOCKS.key(), 0);
         if (maxOc > 0) calc.setMaxOverclocks(maxOc);
 
-        int maxReg = MachineProfile.getInt(s, "maxRegularOc", 0);
+        int maxReg = MachineProfile.getInt(s, Settings.MAX_REGULAR_OC.key(), 0);
         if (maxReg > 0) calc.setMaxRegularOverclocks(maxReg);
 
-        int skips = MachineProfile.getInt(s, "maxTierSkips", 0);
+        int skips = MachineProfile.getInt(s, Settings.MAX_TIER_SKIPS.key(), 0);
         if (skips > 0) calc.setMaxTierSkips(skips);
 
-        if (MachineProfile.getBool(s, "unlimitedSkips", false)) calc.setUnlimitedTierSkips();
+        if (MachineProfile.getBool(s, Settings.UNLIMITED_SKIPS.key(), false)) calc.setUnlimitedTierSkips();
 
         return calc;
     }

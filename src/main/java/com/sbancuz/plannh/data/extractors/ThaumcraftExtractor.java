@@ -5,9 +5,12 @@ import java.util.Map;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -27,6 +30,8 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
     public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty
         .intProperty("instability", "Instability", 0);
 
+    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.intProperty("totalVis", "Total Vis", 0);
+
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
 
     @Override
@@ -39,6 +44,18 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
         RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(VIS_COST);
         RecipePropertyAPI.registerProperty(INSTABILITY);
+        RecipePropertyAPI.registerProperty(TOTAL_VIS);
+        MachineProfileRegistry.register(
+            MachineProfile.builder("thaumcraft:basic", "Thaumcraft")
+                .setting(Settings.MACHINES.def())
+                .setting(Settings.VIS_PER_TICK.def())
+                .effect(ThaumcraftExtractor::simpleEffect)
+                .build());
+    }
+
+    @Override
+    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        return "thaumcraft:basic";
     }
 
     @Override
@@ -47,11 +64,6 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
         return recipeOwner.equals("arcaneshapedrecipes") || recipeOwner.equals("arcaneshapelessrecipes")
             || recipeOwner.equals("cruciblerecipe")
             || recipeOwner.equals("infusionCrafting");
-    }
-
-    @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return null;
     }
 
     @Override
@@ -73,20 +85,29 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
         switch (overlay) {
             case "cruciblerecipe" -> {
                 CrucibleRecipe cr = ThaumcraftApi.getCrucibleRecipe(result);
-                if (cr != null && cr.aspects != null) props.put(VIS_COST, aspectListToPrimals(cr.aspects));
+                if (cr != null && cr.aspects != null) {
+                    props.put(VIS_COST, aspectListToPrimals(cr.aspects));
+                    props.put(TOTAL_VIS, sumVis(cr.aspects));
+                }
             }
             case "infusionCrafting" -> {
                 InfusionRecipe ir = ThaumcraftApi.getInfusionRecipe(result);
                 if (ir != null) {
                     AspectList aspects = ir.getAspects();
-                    if (aspects != null) props.put(VIS_COST, aspectListToPrimals(aspects));
+                    if (aspects != null) {
+                        props.put(VIS_COST, aspectListToPrimals(aspects));
+                        props.put(TOTAL_VIS, sumVis(aspects));
+                    }
                     int instability = ir.getInstability();
                     if (instability > 0) props.put(INSTABILITY, instability);
                 }
             }
             case "arcaneshapedrecipes", "arcaneshapelessrecipes" -> {
                 AspectList aspects = findArcaneAspects(result);
-                if (aspects != null) props.put(VIS_COST, aspectListToPrimals(aspects));
+                if (aspects != null) {
+                    props.put(VIS_COST, aspectListToPrimals(aspects));
+                    props.put(TOTAL_VIS, sumVis(aspects));
+                }
             }
         }
 
@@ -101,6 +122,15 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
                 return ar.getAspects();
         }
         return null;
+    }
+
+    private static int sumVis(AspectList aspects) {
+        if (aspects == null) return 0;
+        int total = 0;
+        for (Aspect a : aspects.getAspects()) {
+            if (a != null) total += aspects.getAmount(a);
+        }
+        return total;
     }
 
     private static int[] aspectListToPrimals(AspectList aspects) {
@@ -120,5 +150,15 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
             }
         }
         return result;
+    }
+
+    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
+        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        int rate = MachineProfile.getInt(s, Settings.VIS_PER_TICK.key(), 1);
+        int duration = ctx.recipeDuration();
+        if (duration <= 0 && rate > 0 && ctx.recipeEUt() > 0) {
+            duration = Math.max(1, (int)(ctx.recipeEUt() / rate));
+        }
+        return new MachineProfile.EffectResult(duration, ctx.recipeEUt(), machines);
     }
 }

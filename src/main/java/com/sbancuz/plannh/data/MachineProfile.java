@@ -1,13 +1,10 @@
 package com.sbancuz.plannh.data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Builder;
-import lombok.Singular;
-
-@Builder(builderClassName = "Builder")
-public record MachineProfile(String id, String displayName, @Singular("setting") List<SettingDef<?>> settings,
+public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
 
     @FunctionalInterface
@@ -21,69 +18,80 @@ public record MachineProfile(String id, String displayName, @Singular("setting")
     public record RecipeContext(long recipeEUt, int recipeDuration) {}
 
     public static Builder builder(String id, String displayName) {
-        return new Builder().id(id)
-            .displayName(displayName);
+        return new Builder(id, displayName);
     }
 
     public static class Builder {
 
+        private final String id;
+        private final String displayName;
+        private final List<SettingDef<?>> settings = new ArrayList<>();
+        private EffectComputer effectComputer;
+
+        private Builder(String id, String displayName) {
+            this.id = id;
+            this.displayName = displayName;
+        }
+
+        public Builder addSetting(SettingDef<?> setting) {
+            settings.add(setting);
+            return this;
+        }
+
+        public Builder addSettings(List<SettingDef<?>> more) {
+            settings.addAll(more);
+            return this;
+        }
+
         public Builder baseSettings() {
-            setting(
-                SettingDef.enumDef(
-                    "voltage",
-                    "Tier",
-                    "OFF",
-                    List.of(
-                        "OFF",
-                        "ULV",
-                        "LV",
-                        "MV",
-                        "HV",
-                        "EV",
-                        "IV",
-                        "LuV",
-                        "ZPM",
-                        "UV",
-                        "UHV",
-                        "UEV",
-                        "UIV",
-                        "UMV",
-                        "UXV",
-                        "MAX")));
-            setting(SettingDef.intDef("amp", "Amp", 1, 1, 64));
-            setting(SettingDef.intDef("speed", "Speed", 100, 10, 10000));
-            setting(SettingDef.intDef("parallels", "Par", 1, 1, 4096));
-            setting(SettingDef.intDef("machines", "Mach", 1, 1, 4096));
-            setting(SettingDef.boolDef("perfectOC", "Perfect OC", false));
+            settings.add(Settings.VOLTAGE.def());
+            settings.add(Settings.AMP.def());
+            settings.add(Settings.SPEED.def());
+            settings.add(Settings.PARALLELS.def());
+            settings.add(Settings.MACHINES.def());
+            settings.add(Settings.PERFECT_OC.def());
             return this;
         }
 
         public Builder heatSettings() {
-            setting(SettingDef.intDef("machineHeat", "M. Heat", 0, 0, 100000));
-            setting(SettingDef.intDef("recipeHeat", "R. Heat", 0, 0, 100000));
-            setting(SettingDef.boolDef("heatOC", "Heat OC", true));
-            setting(SettingDef.boolDef("heatDiscount", "Heat Disc.", false));
-            setting(SettingDef.intDef("heatDiscountMult", "HD Mult.%", 100, 0, 200));
+            settings.add(Settings.MACHINE_HEAT.def());
+            settings.add(Settings.RECIPE_HEAT.def());
+            settings.add(Settings.HEAT_OC.def());
+            settings.add(Settings.HEAT_DISCOUNT.def());
+            settings.add(Settings.HEAT_DISCOUNT_MULT.def());
             return this;
         }
 
         public Builder advancedSettings() {
-            setting(SettingDef.boolDef("laserOC", "Laser OC", false));
-            setting(SettingDef.intDef("eutDiscount", "EU Disc.%", 0, 0, 100));
-            setting(SettingDef.intDef("eutIncreasePerOC", "EU%/OC", 400, 100, 1000));
-            setting(SettingDef.intDef("durationDecreasePerOC", "Spd%/OC", 200, 100, 1000));
-            setting(SettingDef.intDef("maxOverclocks", "Max OC", 0, 0, 64));
-            setting(SettingDef.intDef("maxRegularOc", "Max Reg OC", 0, 0, 64));
-            setting(SettingDef.intDef("maxTierSkips", "Max Skips", 0, 0, 10));
-            setting(SettingDef.boolDef("unlimitedSkips", "Unl. Skips", false));
-            setting(SettingDef.boolDef("noOverclock", "No OC", false));
+            settings.add(Settings.LASER_OC.def());
+            settings.add(Settings.EUT_DISCOUNT.def());
+            settings.add(Settings.EUT_INCREASE_PER_OC.def());
+            settings.add(Settings.DURATION_DECREASE_PER_OC.def());
+            settings.add(Settings.MAX_OVERCLOCKS.def());
+            settings.add(Settings.MAX_REGULAR_OC.def());
+            settings.add(Settings.MAX_TIER_SKIPS.def());
+            settings.add(Settings.UNLIMITED_SKIPS.def());
+            settings.add(Settings.NO_OVERCLOCK.def());
             return this;
         }
 
-        public Builder effect(EffectComputer computer) {
-            this.effectComputer = computer;
+        public Builder setting(SettingDef<?> s) {
+            return addSetting(s);
+        }
+
+        public Builder effect(EffectComputer effect) {
+            this.effectComputer = effect;
             return this;
         }
+
+        public MachineProfile build() {
+            return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer);
+        }
+    }
+
+    public static EffectResult simpleEffect(Map<String, Object> s, RecipeContext ctx) {
+        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
     }
 
     public static int getInt(Map<String, Object> s, String key, int def) {

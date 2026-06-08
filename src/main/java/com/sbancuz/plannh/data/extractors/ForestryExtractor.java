@@ -4,11 +4,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sbancuz.plannh.Compat;
+import net.minecraft.item.ItemStack;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -26,13 +32,23 @@ public class ForestryExtractor implements RecipePropertyExtractor {
 
     @Override
     public String getModId() {
-        return "Forestry";
+        return Compat.FORESTRY.modid;
     }
 
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(PROCESSING_TIME);
+        MachineProfileRegistry.register(
+            MachineProfile.builder("forestry:basic", "Forestry")
+                .setting(Settings.MACHINES.def())
+                .effect(ForestryExtractor::simpleEffect)
+                .build());
+    }
+
+    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
+        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
     }
 
     @Override
@@ -59,16 +75,20 @@ public class ForestryExtractor implements RecipePropertyExtractor {
         if (handler instanceof NEIHandlerSqueezer && cached instanceof CachedSqueezerRecipe s) {
             if (s.processingTime > 0) {
                 props.put(PROCESSING_TIME, s.processingTime);
+                props.put(RecipePropertyAPI.DURATION_TICKS, s.processingTime);
             }
         } else if (handler instanceof NEIHandlerCentrifuge && cached instanceof CachedCentrifugeRecipe c) {
             int time = lookupCentrifugeTime(c.inputs.item);
-            if (time > 0) props.put(PROCESSING_TIME, time);
+            if (time > 0) {
+                props.put(PROCESSING_TIME, time);
+                props.put(RecipePropertyAPI.DURATION_TICKS, time);
+            }
         }
 
         return props;
     }
 
-    private static int lookupCentrifugeTime(net.minecraft.item.ItemStack input) {
+    private static int lookupCentrifugeTime(ItemStack input) {
         if (input == null) return 0;
         for (ICentrifugeRecipe r : RecipeManagers.centrifugeManager.recipes()) {
             if (r.getInput() != null && r.getInput()

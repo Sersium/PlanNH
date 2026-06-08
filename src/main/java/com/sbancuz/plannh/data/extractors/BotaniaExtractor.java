@@ -6,9 +6,12 @@ import java.util.Map;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -28,16 +31,22 @@ public class BotaniaExtractor implements RecipePropertyExtractor {
     public void register() {
         RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(MANA_COST);
+        MachineProfileRegistry.register(
+            MachineProfile.builder("botania:basic", "Botania")
+                .setting(Settings.MACHINES.def())
+                .setting(Settings.MANA_PER_TICK.def())
+                .effect(BotaniaExtractor::simpleEffect)
+                .build());
+    }
+
+    @Override
+    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        return "botania:basic";
     }
 
     @Override
     public boolean canHandle(String recipeOwner) {
         return recipeOwner == null;
-    }
-
-    @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return null;
     }
 
     @Override
@@ -64,5 +73,15 @@ public class BotaniaExtractor implements RecipePropertyExtractor {
         }
 
         return props;
+    }
+
+    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
+        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        int rate = MachineProfile.getInt(s, Settings.MANA_PER_TICK.key(), 10);
+        int duration = ctx.recipeDuration();
+        if (duration <= 0 && rate > 0 && ctx.recipeEUt() > 0) {
+            duration = Math.max(1, (int)(ctx.recipeEUt() / rate));
+        }
+        return new MachineProfile.EffectResult(duration, ctx.recipeEUt(), machines);
     }
 }
