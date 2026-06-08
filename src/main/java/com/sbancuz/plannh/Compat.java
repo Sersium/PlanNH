@@ -1,31 +1,31 @@
 package com.sbancuz.plannh;
 
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
-import com.sbancuz.plannh.data.extractors.AE2Extractor;
-import com.sbancuz.plannh.data.extractors.BotaniaExtractor;
-import com.sbancuz.plannh.data.extractors.EnderIOExtractor;
-import com.sbancuz.plannh.data.extractors.ForestryExtractor;
-import com.sbancuz.plannh.data.extractors.GTExtractor;
-import com.sbancuz.plannh.data.extractors.ThaumcraftExtractor;
+import com.sbancuz.plannh.data.PropertyProvider;
+import com.sbancuz.plannh.data.provider.AE2Provider;
+import com.sbancuz.plannh.data.provider.BotaniaProvider;
+import com.sbancuz.plannh.data.provider.EnderIOProvider;
+import com.sbancuz.plannh.data.provider.ForestryProvider;
+import com.sbancuz.plannh.data.provider.GTProvider;
+import com.sbancuz.plannh.data.provider.ThaumcraftProvider;
 
 import cpw.mods.fml.common.Loader;
 
 public enum Compat {
 
-    GREGTECH("gregtech", new GTExtractor()),
-    ENDERIO("EnderIO", new EnderIOExtractor()),
-    THAUMCRAFT("Thaumcraft", new ThaumcraftExtractor()),
-    BOTANIA("Botania", new BotaniaExtractor()),
-    FORESTRY("Forestry", new ForestryExtractor()),
-    AE2("appliedenergistics2", new AE2Extractor())
+    GREGTECH("gregtech", new GTProvider()),
+    ENDERIO("EnderIO", new EnderIOProvider()),
+    THAUMCRAFT("Thaumcraft", new ThaumcraftProvider()),
+    BOTANIA("Botania", new BotaniaProvider()),
+    FORESTRY("Forestry", new ForestryProvider()),
+    AE2("appliedenergistics2", new AE2Provider())
     //
     ;
 
     public final String modid;
     public final boolean isLoaded;
-    public final RecipePropertyExtractor extractor;
+    public final PropertyProvider extractor;
 
-    Compat(String modid, RecipePropertyExtractor extractor) {
+    Compat(String modid, PropertyProvider extractor) {
         this.modid = modid;
         this.isLoaded = Loader.isModLoaded(modid);
         this.extractor = extractor;

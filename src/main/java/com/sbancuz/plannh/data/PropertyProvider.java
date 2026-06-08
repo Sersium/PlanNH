@@ -6,7 +6,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.recipe.IRecipeHandler;
 
-public interface RecipePropertyExtractor {
+public interface PropertyProvider {
 
     String getModId();
 

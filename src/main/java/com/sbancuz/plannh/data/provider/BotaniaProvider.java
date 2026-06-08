@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.extractors;
+package com.sbancuz.plannh.data.provider;
 
 import java.util.HashMap;
 import java.util.List;
@@ -8,71 +8,69 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 
-import appeng.api.AEApi;
-import appeng.api.features.IGrinderEntry;
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerManaPool.CachedManaPoolRecipe;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.CachedRunicAltarRecipe;
 
-public class AE2Extractor implements RecipePropertyExtractor {
+public class BotaniaProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> ENERGY_COST = RecipeProperty
-        .intProperty("ae2.energyCost", "Energy Cost", 0);
+    public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intProperty("manaCost", "Mana Cost", 0);
 
     @Override
     public String getModId() {
-        return Compat.AE2.modid;
+        return Compat.BOTANIA.modid;
     }
 
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(this);
-        RecipePropertyAPI.registerProperty(ENERGY_COST);
+        RecipePropertyAPI.registerProperty(MANA_COST);
         MachineProfileRegistry.register(
-            MachineProfile.builder("ae2:basic", "AE2 Grinder")
+            MachineProfile.builder("botania:basic", "Botania")
                 .setting(Settings.MACHINES.def())
-                .setting(Settings.ENERGY_PER_TICK.def())
-                .effect(AE2Extractor::simpleEffect)
+                .setting(Settings.MANA_PER_TICK.def())
+                .effect(BotaniaProvider::simpleEffect)
                 .build());
     }
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return "ae2:basic";
+        return "botania:basic";
     }
 
     @Override
     public boolean canHandle(String recipeOwner) {
-        return "grindstone".equals(recipeOwner);
+        return recipeOwner == null;
     }
 
     @Override
     public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
         Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof TemplateRecipeHandler trh)) return props;
+        if (!handler.getClass()
+            .getName()
+            .startsWith("vazkii.botania")) return props;
 
         List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
 
         TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
-        List<PositionedStack> ingredients = cached.getIngredients();
-        if (ingredients == null || ingredients.isEmpty()) return props;
 
-        IGrinderEntry entry = AEApi.instance()
-            .registries()
-            .grinder()
-            .getRecipeForInput(ingredients.getFirst().item);
-        if (entry == null) return props;
-
-        int energy = entry.getEnergyCost();
-        if (energy > 0) {
-            props.put(ENERGY_COST, energy);
+        if (cached instanceof CachedRunicAltarRecipe r) {
+            if (r.manaUsage > 0) {
+                props.put(MANA_COST, r.manaUsage);
+            }
+        } else if (cached instanceof CachedManaPoolRecipe r) {
+            if (r.mana > 0) {
+                props.put(MANA_COST, r.mana);
+            }
         }
 
         return props;
@@ -80,8 +78,8 @@ public class AE2Extractor implements RecipePropertyExtractor {
 
     private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
         int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        int rate = MachineProfile.getInt(s, Settings.ENERGY_PER_TICK.key(), 10);
-        Integer totalEnergy = ctx.get(AE2Extractor.ENERGY_COST);
+        int rate = MachineProfile.getInt(s, Settings.MANA_PER_TICK.key(), 10);
+        Integer totalEnergy = ctx.get(BotaniaProvider.MANA_COST);
         int duration = ctx.recipeDuration();
         if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
             duration = Math.max(1, totalEnergy / rate);

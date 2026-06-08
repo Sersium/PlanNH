@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
 
 public class RecipePropertyAPI {
 
     private static final List<RecipeProperty<?>> properties = new ArrayList<>();
-    private static final List<RecipePropertyExtractor> extractors = new ArrayList<>();
+    private static final List<PropertyProvider> extractors = new ArrayList<>();
 
     // Built-in property constants
     public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty
@@ -28,7 +28,7 @@ public class RecipePropertyAPI {
         properties.add(property);
     }
 
-    public static void registerExtractor(RecipePropertyExtractor extractor) {
+    public static void registerExtractor(PropertyProvider extractor) {
         extractors.add(extractor);
     }
 
@@ -36,7 +36,7 @@ public class RecipePropertyAPI {
         return Collections.unmodifiableList(properties);
     }
 
-    public static List<RecipePropertyExtractor> getExtractors() {
+    public static List<PropertyProvider> getExtractors() {
         return Collections.unmodifiableList(extractors);
     }
 }

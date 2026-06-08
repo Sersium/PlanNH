@@ -11,7 +11,7 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.ExtractedProperties;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.PropertyProvider;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -67,13 +67,13 @@ public class Node {
             }
         }
 
-        for (RecipePropertyExtractor ex : RecipePropertyAPI.getExtractors()) {
+        for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
             if (ex.canHandle(handler.getOverlayIdentifier())) {
                 this.properties.putAll(ex.extract(this, handler, recipeIndex));
             }
         }
 
-        for (RecipePropertyExtractor ex : RecipePropertyAPI.getExtractors()) {
+        for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
             if (ex.canHandle(handler.getOverlayIdentifier())) {
                 String pid = ex.getProfileId(handler, recipeIndex);
                 if (pid != null && !MachineProfileRegistry.defaultId()

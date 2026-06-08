@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.extractors;
+package com.sbancuz.plannh.data.provider;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -9,9 +9,9 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 
@@ -24,7 +24,7 @@ import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
-public class EnderIOExtractor implements RecipePropertyExtractor {
+public class EnderIOProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", "RF Total", 0);
     public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", "Experience", 0);
@@ -45,7 +45,7 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
             MachineProfile.builder("enderio", "EnderIO")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.RF_PER_TICK.def())
-                .effect(EnderIOExtractor::enderIOEffect)
+                .effect(EnderIOProvider::enderIOEffect)
                 .build());
 
         Field f = null;
@@ -108,7 +108,7 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
     private static MachineProfile.EffectResult enderIOEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
         int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 80);
-        Integer totalEnergy = ctx.get(EnderIOExtractor.RF_TOTAL);
+        Integer totalEnergy = ctx.get(EnderIOProvider.RF_TOTAL);
         int duration = ctx.recipeDuration();
         if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
             duration = Math.max(1, totalEnergy / rate);

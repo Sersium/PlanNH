@@ -1,14 +1,15 @@
-package com.sbancuz.plannh.data.extractors;
+package com.sbancuz.plannh.data.provider;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 
@@ -22,7 +23,7 @@ import thaumcraft.api.crafting.InfusionRecipe;
 import thaumcraft.api.crafting.ShapedArcaneRecipe;
 import thaumcraft.api.crafting.ShapelessArcaneRecipe;
 
-public class ThaumcraftExtractor implements RecipePropertyExtractor {
+public class ThaumcraftProvider implements PropertyProvider {
 
     public static final RecipeProperty<int[]> VIS_COST = RecipeProperty
         .intArrayProperty("visCost", "Vis Cost", new int[6]);
@@ -36,7 +37,7 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
 
     @Override
     public String getModId() {
-        return "Thaumcraft";
+        return Compat.THAUMCRAFT.modid;
     }
 
     @Override
@@ -49,7 +50,7 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
             MachineProfile.builder("thaumcraft:basic", "Thaumcraft")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.VIS_PER_TICK.def())
-                .effect(ThaumcraftExtractor::simpleEffect)
+                .effect(ThaumcraftProvider::simpleEffect)
                 .build());
     }
 
@@ -155,7 +156,7 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
     private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
         int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         int rate = MachineProfile.getInt(s, Settings.VIS_PER_TICK.key(), 1);
-        Integer totalEnergy = ctx.get(ThaumcraftExtractor.TOTAL_VIS);
+        Integer totalEnergy = ctx.get(ThaumcraftProvider.TOTAL_VIS);
         int duration = ctx.recipeDuration();
         if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
             duration = Math.max(1, totalEnergy / rate);

@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.extractors;
+package com.sbancuz.plannh.data.provider;
 
 import java.util.HashMap;
 import java.util.List;
@@ -8,9 +8,9 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 
@@ -25,7 +25,7 @@ import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
-public class GTExtractor implements RecipePropertyExtractor {
+public class GTProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty
         .intProperty("specialValue", "Special Value", 0);

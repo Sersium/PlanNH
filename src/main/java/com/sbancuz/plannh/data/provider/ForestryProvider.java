@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.extractors;
+package com.sbancuz.plannh.data.provider;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,9 +10,9 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 
@@ -25,7 +25,7 @@ import forestry.factory.recipes.nei.NEIHandlerCentrifuge.CachedCentrifugeRecipe;
 import forestry.factory.recipes.nei.NEIHandlerSqueezer;
 import forestry.factory.recipes.nei.NEIHandlerSqueezer.CachedSqueezerRecipe;
 
-public class ForestryExtractor implements RecipePropertyExtractor {
+public class ForestryProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> PROCESSING_TIME = RecipeProperty
         .intProperty("forestry.processingTime", "Processing Time", 0);
@@ -43,7 +43,7 @@ public class ForestryExtractor implements RecipePropertyExtractor {
             MachineProfile.builder("forestry:basic", "Forestry")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.FORESTRY_RF_PER_TICK.def())
-                .effect(ForestryExtractor::simpleEffect)
+                .effect(ForestryProvider::simpleEffect)
                 .build());
     }
 
