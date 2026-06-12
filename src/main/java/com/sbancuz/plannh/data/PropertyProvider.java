@@ -17,4 +17,8 @@ public interface PropertyProvider {
     default String getProfileId(IRecipeHandler handler, int recipeIndex) {
         return null;
     }
+
+    default boolean canCraft(IRecipeHandler handler, int recipeIndex) {
+        return true;
+    }
 }

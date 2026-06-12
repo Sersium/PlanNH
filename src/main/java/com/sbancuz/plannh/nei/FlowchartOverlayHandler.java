@@ -1,8 +1,12 @@
 package com.sbancuz.plannh.nei;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.util.ChatComponentText;
 
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
@@ -26,6 +30,10 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
 
     @Override
     public boolean canCraft(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
+        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
+            if (!provider.canCraft(handler, recipeIndex)) return false;
+        }
+
         return true;
     }
 
