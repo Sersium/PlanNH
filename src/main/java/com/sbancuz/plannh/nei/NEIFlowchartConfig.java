@@ -38,6 +38,12 @@ public class NEIFlowchartConfig implements IConfigureNEI {
                 API.registerGuiOverlayHandler(FlowchartGuiContainer.class, HANDLER, ident);
             }
         }
+    }
+
+    @SubscribeEvent
+    public void onPostButtonUpdate(UpdateRecipeButtonsEvent.Post event) {
+        GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
+        if (!(gui.firstGui instanceof FlowchartGuiContainer)) return;
 
         for (GuiRecipeButton btn : event.buttonList) {
             if (btn instanceof GuiOverlayButton) {

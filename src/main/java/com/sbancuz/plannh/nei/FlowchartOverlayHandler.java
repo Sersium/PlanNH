@@ -1,10 +1,9 @@
 package com.sbancuz.plannh.nei;
 
-import codechicken.nei.PositionedStack;
-import codechicken.nei.recipe.GuiOverlayButton;
-import net.minecraft.client.Minecraft;
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.util.ChatComponentText;
 
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -14,11 +13,10 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
+import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.IRecipeHandler;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class FlowchartOverlayHandler implements IOverlayHandler {
 
@@ -43,11 +41,7 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     @Override
-    public boolean canFillCraftingGrid(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex) {
-        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
-            if (!provider.canCraft(recipe, recipeIndex)) return false;
-        }
-
+    public boolean canFillCraftingGrid(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
         return true;
     }
 
@@ -61,9 +55,6 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     private static void addRecipe(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
-        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
-            if (!provider.canCraft(handler, recipeIndex)) return;
-        }
         Node node = new Node(handler, recipeIndex, 200, 200);
         Graph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
@@ -78,7 +69,8 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     @Override
-    public List<GuiOverlayButton.ItemOverlayState> presenceOverlay(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex) {
+    public List<GuiOverlayButton.ItemOverlayState> presenceOverlay(GuiContainer firstGui, IRecipeHandler recipe,
+        int recipeIndex) {
         final List<GuiOverlayButton.ItemOverlayState> itemPresenceSlots = new ArrayList<>();
         final List<PositionedStack> ingredients = recipe.getIngredientStacks(recipeIndex);
 
