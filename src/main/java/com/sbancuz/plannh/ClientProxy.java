@@ -18,7 +18,10 @@ import cpw.mods.fml.common.gameevent.InputEvent;
 
 public class ClientProxy extends CommonProxy {
 
-    private static KeyBinding openFlowchartKey;
+    private static final KeyBinding openFlowchartKey = new KeyBinding(
+        "key.neiflowchart.open",
+        Keyboard.KEY_F8,
+        "key.categories.neiflowchart");
 
     @Override
     public void init(final FMLInitializationEvent event) {
@@ -27,7 +30,6 @@ public class ClientProxy extends CommonProxy {
         Compat.init();
         new VanillaProvider().register();
 
-        openFlowchartKey = new KeyBinding("key.neiflowchart.open", Keyboard.KEY_F8, "key.categories.neiflowchart");
         ClientRegistry.registerKeyBinding(openFlowchartKey);
 
         FMLCommonHandler.instance()
@@ -37,7 +39,7 @@ public class ClientProxy extends CommonProxy {
 
     @SubscribeEvent
     public void onKeyInput(final InputEvent.KeyInputEvent event) {
-        if (openFlowchartKey != null && openFlowchartKey.isPressed()) {
+        if (openFlowchartKey.isPressed()) {
             final ModularContainer container = new ModularContainer();
             container.constructClientOnly();
             final FlowchartScreen screen = FlowchartScreen.create();

@@ -2,11 +2,16 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 public class Edge {
 
+    @Nonnull
     public final UUID id;
     /// Nodes
+    @Nonnull
     public final UUID sourceNodeId;
+    @Nonnull
     public final UUID targetNodeId;
     /// Recipe source/targets inside the nodes
     public int sourceOutputIndex;

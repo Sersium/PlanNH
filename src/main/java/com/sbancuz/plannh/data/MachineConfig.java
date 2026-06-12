@@ -3,6 +3,8 @@ package com.sbancuz.plannh.data;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 public class MachineConfig {
 
     public String profileId = MachineProfileRegistry.defaultId();
@@ -10,6 +12,7 @@ public class MachineConfig {
     public final Map<Integer, Float> inputConsumption = new HashMap<>();
     public final Map<Integer, Float> outputProductivity = new HashMap<>();
 
+    @Nonnull
     public MachineProfile getProfile() {
         final MachineProfile p = MachineProfileRegistry.get(profileId);
         return p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
@@ -44,16 +47,15 @@ public class MachineConfig {
 
     public void initDefaults() {
         final MachineProfile p = getProfile();
-        if (p == null) return;
         for (final SettingDef<?> def : p.settings()) {
             settings.putIfAbsent(def.key, def.defaultValue);
         }
     }
 
+    @Nonnull
     public MachineProfile.EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties,
         final int recipeDuration) {
         final MachineProfile profile = getProfile();
-        if (profile == null) return new MachineProfile.EffectResult(0, 0, 1);
         MachineProfile.EffectResult result = profile.effectComputer()
             .compute(settings, new MachineProfile.RecipeContext(properties, recipeDuration));
         final int tickMod = MachineProfile.getInt(settings, Settings.TICK_MODIFIER.key(), 100);
@@ -78,21 +80,10 @@ public class MachineConfig {
         if (!MachineProfileRegistry.defaultId()
             .equals(profileId)) return true;
         final MachineProfile p = getProfile();
-        if (p != null) {
-            for (final SettingDef<?> def : p.settings()) {
-                final Object val = settings.get(def.key);
-                if (val != null && !val.equals(def.defaultValue)) return true;
-            }
+        for (final SettingDef<?> def : p.settings()) {
+            final Object val = settings.get(def.key);
+            if (val != null && !val.equals(def.defaultValue)) return true;
         }
         return !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
-    }
-
-    public MachineConfig copy() {
-        final MachineConfig c = new MachineConfig();
-        c.profileId = profileId;
-        c.settings.putAll(settings);
-        c.inputConsumption.putAll(inputConsumption);
-        c.outputProductivity.putAll(outputProductivity);
-        return c;
     }
 }

@@ -3,6 +3,8 @@ package com.sbancuz.plannh.data;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import javax.annotation.Nonnull;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -36,6 +38,7 @@ public class RecipeProperty<T> {
         return deserializer.apply(obj);
     }
 
+    @Nonnull
     public static RecipeProperty<Long> longProperty(final String key, final String displayName,
         final long defaultValue) {
         return new RecipeProperty<>(
@@ -47,6 +50,7 @@ public class RecipeProperty<T> {
                 .getAsLong() : defaultValue);
     }
 
+    @Nonnull
     public static RecipeProperty<Integer> intProperty(final String key, final String displayName,
         final int defaultValue) {
         return new RecipeProperty<>(
@@ -58,6 +62,7 @@ public class RecipeProperty<T> {
                 .getAsInt() : defaultValue);
     }
 
+    @Nonnull
     public static RecipeProperty<String> stringProperty(final String key, final String displayName,
         final String defaultValue) {
         return new RecipeProperty<>(
@@ -69,6 +74,7 @@ public class RecipeProperty<T> {
                 .getAsString() : defaultValue);
     }
 
+    @Nonnull
     public static RecipeProperty<Float> floatProperty(final String key, final String displayName,
         final float defaultValue) {
         return new RecipeProperty<>(
@@ -80,6 +86,7 @@ public class RecipeProperty<T> {
                 .getAsFloat() : defaultValue);
     }
 
+    @Nonnull
     public static RecipeProperty<Boolean> boolProperty(final String key, final String displayName,
         final boolean defaultValue) {
         return new RecipeProperty<>(
@@ -91,6 +98,7 @@ public class RecipeProperty<T> {
                 .getAsBoolean() : defaultValue);
     }
 
+    @Nonnull
     public static RecipeProperty<int[]> intArrayProperty(final String key, final String displayName,
         final int[] defaultValue) {
         return new RecipeProperty<>(key, displayName, defaultValue, (obj, val) -> {

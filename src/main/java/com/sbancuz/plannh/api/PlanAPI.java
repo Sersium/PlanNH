@@ -4,6 +4,9 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
@@ -12,11 +15,12 @@ import com.sbancuz.plannh.data.flowchart.SlotSet;
 
 import codechicken.nei.NEIClientConfig;
 
-public enum PlanAPI {
-    ;
+public final class PlanAPI {
 
+    @Nullable
     private static SlotSet slotSet = null;
 
+    @Nonnull
     public static SlotSet getSlotSet() {
         if (slotSet == null) {
             slotSet = loadSlotSet();
@@ -24,6 +28,7 @@ public enum PlanAPI {
         return slotSet;
     }
 
+    @Nonnull
     public static Graph getActiveGraph() {
         return getSlotSet().getActiveGraph();
     }

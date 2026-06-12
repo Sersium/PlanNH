@@ -3,6 +3,9 @@ package com.sbancuz.plannh.data.provider;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -17,6 +20,7 @@ import codechicken.nei.recipe.IRecipeHandler;
 public class VanillaProvider implements PropertyProvider {
 
     @Override
+    @Nonnull
     public String getModId() {
         return "minecraft";
     }
@@ -32,6 +36,7 @@ public class VanillaProvider implements PropertyProvider {
                 .build());
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult vanillaEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
@@ -39,12 +44,14 @@ public class VanillaProvider implements PropertyProvider {
     }
 
     @Override
+    @Nullable
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof FurnaceRecipeHandler)) return null;
         return MachineProfileRegistry.defaultId();
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
         final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();

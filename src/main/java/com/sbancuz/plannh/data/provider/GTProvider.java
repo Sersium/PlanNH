@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -38,6 +41,7 @@ public class GTProvider implements PropertyProvider {
     public static final RecipeProperty<Integer> MASS = RecipeProperty.intProperty("bartworks.mass", "Mass", 0);
 
     @Override
+    @Nonnull
     public String getModId() {
         return Compat.GREGTECH.modid;
     }
@@ -195,6 +199,7 @@ public class GTProvider implements PropertyProvider {
         ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
 
     @Override
+    @Nullable
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(fh);
@@ -220,6 +225,7 @@ public class GTProvider implements PropertyProvider {
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final GTNEIDefaultHandler gth)) return props;
@@ -312,22 +318,26 @@ public class GTProvider implements PropertyProvider {
         private boolean forceLaserOC;
         private boolean forcePerfectOC;
 
+        @Nonnull
         public EffectBuilder withHeat() {
             this.forceHeat = true;
             return this;
         }
 
+        @Nonnull
         public EffectBuilder withPerfectOC() {
             this.forcePerfectOC = true;
             return this;
         }
 
+        @Nonnull
         public EffectBuilder withLaserOC() {
             this.forceLaserOC = true;
             return this;
         }
 
         @Override
+        @Nonnull
         public MachineProfile.EffectResult compute(final Map<String, Object> s,
             final MachineProfile.RecipeContext ctx) {
             final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
@@ -364,6 +374,7 @@ public class GTProvider implements PropertyProvider {
 
     // ── GT helpers ──
 
+    @Nonnull
     private static OverclockCalculator buildGtCalc(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final long voltage = MachineProfile

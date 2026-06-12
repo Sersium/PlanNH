@@ -4,10 +4,14 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import codechicken.nei.recipe.TemplateRecipeHandler;
 
 public final class RecipeHandlerAccess {
 
+    @Nullable
     private static final Field ARECIPES;
 
     static {
@@ -20,6 +24,7 @@ public final class RecipeHandlerAccess {
     }
 
     @SuppressWarnings("unchecked")
+    @Nonnull
     public static List<TemplateRecipeHandler.CachedRecipe> getArecipes(final TemplateRecipeHandler handler) {
         if (ARECIPES != null) {
             try {

@@ -7,11 +7,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
@@ -44,6 +46,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int NODE_H_ESTIMATE = 80;
     private static final int HEADER_OFFSET = 24;
 
+    @Nonnull
     @Getter
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
@@ -158,6 +161,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         autoFitGroups();
     }
 
+    @Nullable
     public Group getGroupForNode(final UUID nodeId) {
         for (final Group g : graph.getGroups()) {
             if (g.nodeIds.contains(nodeId)) return g;
@@ -404,6 +408,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         GL11.glLineWidth(1);
     }
 
+    @Nullable
     private Edge getEdgeAt(final int absMx, final int absMy) {
         final int margin = Math.max(4, Math.round(4 * zoom));
         final int cmx = absMx - getArea().x;
@@ -465,7 +470,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public @NotNull Result onMousePressed(final int mouseButton) {
+    public @Nonnull Result onMousePressed(final int mouseButton) {
         final int absMx = getContext().getAbsMouseX();
         final int absMy = getContext().getAbsMouseY();
 
@@ -663,7 +668,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         graph.notes.remove(noteId);
     }
 
+    @Nullable
     private UUID editingNoteId = null;
+    @Nullable
     private UUID editingGroupId = null;
 
     public void startEditingNote(final UUID noteId) {
@@ -689,7 +696,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public @NotNull Result onKeyPressed(final char typedChar, final int keyCode) {
+    public @Nonnull Result onKeyPressed(final char typedChar, final int keyCode) {
         if (editingNoteId != null) {
             final NoteWidget nw = noteWidgets.get(editingNoteId);
             if (nw == null) {
@@ -745,6 +752,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return Result.IGNORE;
     }
 
+    @Nullable
     private ContextMenuWidget contextMenu = null;
 
     public void showContextMenu(final int x, final int y, final List<ContextMenuWidget.MenuItem> items) {

@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public class ExtractedProperties {
 
     private final Map<RecipeProperty<?>, Object> values = new HashMap<>();
@@ -17,7 +20,7 @@ public class ExtractedProperties {
         return property.getDefaultValue();
     }
 
-    public <T> void set(final RecipeProperty<T> property, final T value) {
+    public <T> void set(final RecipeProperty<T> property, @Nullable final T value) {
         if (value != null && !value.equals(property.getDefaultValue())) {
             values.put(property, value);
         } else {
@@ -37,6 +40,7 @@ public class ExtractedProperties {
         return Collections.unmodifiableSet(values.entrySet());
     }
 
+    @Nonnull
     public Map<RecipeProperty<?>, Object> asMap() {
         return Collections.unmodifiableMap(values);
     }

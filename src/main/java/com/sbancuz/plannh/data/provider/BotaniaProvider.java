@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -24,6 +27,7 @@ public class BotaniaProvider implements PropertyProvider {
     public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intProperty("manaCost", "Mana Cost", 0);
 
     @Override
+    @Nonnull
     public String getModId() {
         return Compat.BOTANIA.modid;
     }
@@ -42,6 +46,7 @@ public class BotaniaProvider implements PropertyProvider {
     }
 
     @Override
+    @Nullable
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!handler.getClass()
             .getName()
@@ -50,6 +55,7 @@ public class BotaniaProvider implements PropertyProvider {
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
@@ -75,6 +81,7 @@ public class BotaniaProvider implements PropertyProvider {
         return props;
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);

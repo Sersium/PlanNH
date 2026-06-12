@@ -5,10 +5,11 @@ import static org.lwjgl.opengl.GL11.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
-
-import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -52,8 +53,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         184,
         174).build();
 
+    @Nonnull
     @Getter
     private final Node node;
+    @Nonnull
     private final CanvasWidget canvas;
 
     private boolean dragging = false;
@@ -63,7 +66,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private boolean doubleClickPending = false;
     private final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
 
+    @Nullable
     private RecipeHandlerRef handlerRef;
+    @Nullable
     private NEIRecipeWidget neiWidget;
     private String recipeName = "";
     private boolean handlerInitFailed = false;
@@ -100,6 +105,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return g.colorOverride != 0 ? g.colorOverride : PlannhColors.titleColor(g.title);
     }
 
+    @Nullable
     private NodeBalance getNodeBalance() {
         final BalanceResult br = canvas.getGraph()
             .balance();
@@ -108,7 +114,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int calcInfoHeight() {
-        final int lines = 1 + node.inputs.size() + node.outputs.size() + node.fluidInputs.size() + node.fluidOutputs.size();
+        final int lines = 1 + node.inputs.size()
+            + node.outputs.size()
+            + node.fluidInputs.size()
+            + node.fluidOutputs.size();
         return lines * LINE_H + 6;
     }
 
@@ -139,7 +148,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private void resizeForZoom(final float z) {
-        if (handlerRef != null) {
+        if (handlerRef != null && neiWidget != null) {
             final int cw = neiWidget.w + 10;
             final int ch = neiWidget.h + 22 + calcInfoHeight() + computeConfigPanelHeight();
             setAreaSize(Math.round((cw + 16) * z), Math.round((ch + 16) * z));
@@ -153,7 +162,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         ensureRecipeHandler();
 
         final float z = canvas.getZoom();
-        if (neiWidget != null) {
+        if (neiWidget != null && handlerRef != null) {
             final long now = Minecraft.getSystemTime();
             if (now - lastHandlerUpdate > 50) {
                 lastHandlerUpdate = now;
@@ -223,6 +232,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             GuiDraw.drawRect(0, 0, w, h, PlannhColors.NODE_BG.getColor());
             GuiHelper.drawRectBorder(0, 0, w, h, zq(1), PlannhColors.NODE_BORDER.getColor());
 
+            assert node.machineName != null;
             GuiDraw.drawText(
                 node.machineName.isEmpty() ? "?" : node.machineName,
                 zq(4),
@@ -357,6 +367,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private void drawThroughputInfo() {
+        if (neiWidget == null) return;
+
         final int x = 8;
         int y = 17 + neiWidget.h + 4;
 
@@ -372,7 +384,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         final int durPerOp = nb != null ? nb.durationPerOp : node.durationTicks;
         final StringBuilder opsLine = new StringBuilder();
-        opsLine.append("\u00d7").append(ops);
+        opsLine.append("\u00d7")
+            .append(ops);
         if (durPerOp > 0) {
             opsLine.append("  ")
                 .append(durPerOp)
@@ -442,7 +455,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     @Override
-    public @NotNull Result onMousePressed(final int mouseButton) {
+    public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton == 0) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
@@ -578,14 +591,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             return y + LINE_H;
         } else if (def.type == String.class && def.hasOptions()) {
             final String val = c.getString(def.key);
-            int optIdx = def.options.indexOf(val);
-            if (optIdx < 0) optIdx = 0;
             GuiDraw.drawText(def.label + " " + val, x, y, 1.0f, PlannhColors.SETTING_ON.getColor(), false);
 
             final int decX = x + 80;
             final int incX = decX + 22;
             GuiDraw.drawText("[-]", decX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
             GuiDraw.drawText("[+]", incX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
+
+            assert def.options != null;
 
             configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
                 final int cur = def.options.indexOf(c.getString(def.key));

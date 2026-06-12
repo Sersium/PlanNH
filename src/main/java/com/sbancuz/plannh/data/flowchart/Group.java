@@ -4,9 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 public class Group {
 
+    @Nonnull
     public final UUID id;
+    @Nonnull
     public String title;
     public int x, y;
     public int width, height;
@@ -14,6 +18,7 @@ public class Group {
     public int colorOverride;
     public boolean clampNodes;
     public boolean autoResize;
+    @Nonnull
     public final List<UUID> nodeIds = new ArrayList<>();
 
     public Group(final UUID id, final int x, final int y, final int width, final int height, final String title) {

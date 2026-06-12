@@ -5,21 +5,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
+import lombok.Setter;
+
 public class Graph {
 
+    @Nonnull
     public final Map<UUID, Node> nodes = new HashMap<>();
+    @Nonnull
     public final Map<UUID, Edge> edges = new HashMap<>();
+    @Nonnull
     public final Map<UUID, Note> notes = new HashMap<>();
+    @Nonnull
     public final Map<UUID, Group> groups = new HashMap<>();
 
+    @Setter
     private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.BACKWARD;
 
+    @Nonnull
     public Balancer.BalanceMode getBalanceMode() {
         return balanceMode;
-    }
-
-    public void setBalanceMode(final Balancer.BalanceMode mode) {
-        this.balanceMode = mode;
     }
 
     public void addNode(final Node node) {
@@ -40,14 +46,17 @@ public class Graph {
         edges.remove(id);
     }
 
+    @Nonnull
     public Balancer.BalanceResult balance() {
         return Balancer.balance(this, balanceMode);
     }
 
+    @Nonnull
     public Collection<Node> getNodes() {
         return nodes.values();
     }
 
+    @Nonnull
     public Collection<Edge> getEdges() {
         return edges.values();
     }
@@ -60,6 +69,7 @@ public class Graph {
         groups.remove(id);
     }
 
+    @Nonnull
     public Collection<Group> getGroups() {
         return groups.values();
     }

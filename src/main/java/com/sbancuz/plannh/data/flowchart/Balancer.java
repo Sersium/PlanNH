@@ -11,6 +11,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -26,6 +29,7 @@ public final class Balancer {
         BACKWARD
     }
 
+    @Nonnull
     public static BalanceResult balance(final Graph graph, final BalanceMode mode) {
         return switch (mode) {
             case NONE -> balanceNone(graph);
@@ -34,6 +38,7 @@ public final class Balancer {
         };
     }
 
+    @Nonnull
     private static BalanceResult balanceNone(final Graph graph) {
         final Map<UUID, Integer> ops = new HashMap<>();
         for (final Node node : graph.getNodes()) {
@@ -49,6 +54,7 @@ public final class Balancer {
         return buildResult(graph, ops, throughputFactors);
     }
 
+    @Nonnull
     private static BalanceResult balanceForward(final Graph graph) {
         final Map<UUID, List<Edge>> outEdges = new HashMap<>();
         final Map<UUID, List<Edge>> inEdges = new HashMap<>();
@@ -70,8 +76,10 @@ public final class Balancer {
 
         final Map<UUID, Integer> ops = new HashMap<>();
         for (final Node node : graph.getNodes()) {
-            ops.put(node.id, inEdges.get(node.id)
-                .isEmpty() ? 1 : 0);
+            ops.put(
+                node.id,
+                inEdges.get(node.id)
+                    .isEmpty() ? 1 : 0);
         }
 
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
@@ -123,7 +131,8 @@ public final class Balancer {
                 final int srcThroughput = throughputFactors.get(nodeId);
                 final int tgtThroughput = throughputFactors.get(edge.targetNodeId);
 
-                final float yield = currentOps * myOutputCount * outputChance
+                final float yield = currentOps * myOutputCount
+                    * outputChance
                     * cfg.outputMultiplier(edge.sourceOutputIndex)
                     * srcThroughput;
 
@@ -149,6 +158,7 @@ public final class Balancer {
         return buildResult(graph, ops, throughputFactors);
     }
 
+    @Nonnull
     private static BalanceResult balanceBackward(final Graph graph) {
         final Map<UUID, List<Edge>> outEdges = new HashMap<>();
         final Map<UUID, List<Edge>> inEdges = new HashMap<>();
@@ -272,6 +282,7 @@ public final class Balancer {
         return buildResult(graph, ops, throughputFactors);
     }
 
+    @Nullable
     private static List<UUID> topologicalSort(final Graph graph, final Map<UUID, List<Edge>> inEdges) {
         final Map<UUID, Integer> inDegree = new HashMap<>();
         for (final Node node : graph.getNodes()) {
@@ -313,6 +324,7 @@ public final class Balancer {
         return result;
     }
 
+    @Nonnull
     private static BalanceResult fallbackBalance(final Graph graph) {
         final Map<UUID, Integer> ops = new HashMap<>();
         for (final Node node : graph.getNodes()) {
@@ -328,6 +340,7 @@ public final class Balancer {
         return buildResult(graph, ops, throughputFactors);
     }
 
+    @Nonnull
     private static BalanceResult buildResult(final Graph graph, final Map<UUID, Integer> ops,
                                              final Map<UUID, Integer> throughputFactors) {
         final Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
@@ -399,7 +412,6 @@ public final class Balancer {
 
         for (final Node node : graph.getNodes()) {
             final NodeBalance nb = nodeBalances.get(node.id);
-            final MachineConfig cfg = node.machineConfig;
 
             final int nodeOps = ops.get(node.id);
             final int throughputFactor = throughputFactors.getOrDefault(node.id, 1);

@@ -3,6 +3,9 @@ package com.sbancuz.plannh.data.provider;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
@@ -46,6 +49,7 @@ public class ThaumcraftProvider implements PropertyProvider {
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
 
     @Override
+    @Nonnull
     public String getModId() {
         return Compat.THAUMCRAFT.modid;
     }
@@ -74,6 +78,7 @@ public class ThaumcraftProvider implements PropertyProvider {
     }
 
     @Override
+    @Nullable
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof TemplateRecipeHandler)) return null;
         final String overlay = handler.getOverlayIdentifier();
@@ -97,6 +102,7 @@ public class ThaumcraftProvider implements PropertyProvider {
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
@@ -162,6 +168,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         return props;
     }
 
+    @Nullable
     private static String findResearchKey(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof final TemplateRecipeHandler trh)) return null;
         final String overlay = trh.getOverlayIdentifier();
@@ -206,7 +213,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         };
     }
 
-    private static int sumVis(final AspectList aspects) {
+    private static int sumVis(final @Nullable AspectList aspects) {
         if (aspects == null) return 0;
         int total = 0;
         for (final Aspect a : aspects.getAspects()) {
@@ -215,7 +222,8 @@ public class ThaumcraftProvider implements PropertyProvider {
         return total;
     }
 
-    private static int[] aspectListToPrimals(final AspectList aspects) {
+    @Nonnull
+    private static int[] aspectListToPrimals(final @Nullable AspectList aspects) {
         final int[] result = new int[6];
         if (aspects == null) return result;
         final Aspect[] aspectArray = aspects.getAspects();
@@ -234,6 +242,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         return result;
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult arcaneEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
@@ -247,6 +256,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult infusionEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
@@ -258,7 +268,7 @@ public class ThaumcraftProvider implements PropertyProvider {
             final int tv = totalVis != null ? totalVis : 0;
             duration = Math.max(1, tv * 10 + nc * 60);
         }
-        final long consumptionEUt = duration > 0 && totalVis != null ? totalVis / duration : 0;
+        final long consumptionEUt = totalVis != null ? totalVis / duration : 0;
         return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 }

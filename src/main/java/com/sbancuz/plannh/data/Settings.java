@@ -3,6 +3,8 @@ package com.sbancuz.plannh.data;
 import java.util.List;
 import java.util.function.BiFunction;
 
+import javax.annotation.Nonnull;
+
 public enum Settings {
 
     // ── enum-type settings ──
@@ -68,10 +70,12 @@ public enum Settings {
         this.def = SettingDef.enumDef(key, label, defaultValue, options, badgeFn);
     }
 
+    @Nonnull
     public SettingDef<?> def() {
         return def;
     }
 
+    @Nonnull
     public String key() {
         return def.key;
     }

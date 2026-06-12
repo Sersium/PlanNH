@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 
 import com.sbancuz.plannh.Compat;
@@ -31,6 +34,7 @@ public class ForestryProvider implements PropertyProvider {
         .intProperty("forestry.processingTime", "Processing Time", 0);
 
     @Override
+    @Nonnull
     public String getModId() {
         return Compat.FORESTRY.modid;
     }
@@ -48,6 +52,7 @@ public class ForestryProvider implements PropertyProvider {
                 .build());
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
@@ -56,6 +61,7 @@ public class ForestryProvider implements PropertyProvider {
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
@@ -81,7 +87,7 @@ public class ForestryProvider implements PropertyProvider {
         return props;
     }
 
-    private static int lookupCentrifugeTime(final ItemStack input) {
+    private static int lookupCentrifugeTime(final @Nullable ItemStack input) {
         if (input == null) return 0;
         for (final ICentrifugeRecipe r : RecipeManagers.centrifugeManager.recipes()) {
             if (r.getInput() != null && r.getInput()

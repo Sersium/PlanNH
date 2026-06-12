@@ -3,6 +3,8 @@ package com.sbancuz.plannh.data.flowchart;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -13,6 +15,7 @@ public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
 
     public static class SummaryLine {
 
+        @Nonnull
         public final ItemStack stack;
         public int totalCount;
 
@@ -24,6 +27,7 @@ public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
 
     public static class FluidSummaryLine {
 
+        @Nonnull
         public final FluidStack fluid;
         public int totalAmount;
 

@@ -1,8 +1,8 @@
 package com.sbancuz.plannh.gui;
 
-import net.minecraft.client.Minecraft;
+import javax.annotation.Nonnull;
 
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.client.Minecraft;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -19,8 +19,10 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     private static final int NOTE_H = 60;
     private static final int CLOSE_W = 12;
 
+    @Nonnull
     @Getter
     private final Note note;
+    @Nonnull
     private final CanvasWidget canvas;
 
     private boolean dragging = false;
@@ -102,7 +104,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     }
 
     @Override
-    public @NotNull Result onMousePressed(final int mouseButton) {
+    public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton != 0) return Result.IGNORE;
         final int mx = getContext().getMouseX();
         final int my = getContext().getMouseY();

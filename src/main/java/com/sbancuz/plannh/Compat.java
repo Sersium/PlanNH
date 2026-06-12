@@ -1,5 +1,8 @@
 package com.sbancuz.plannh;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.provider.AE2Provider;
 import com.sbancuz.plannh.data.provider.BotaniaProvider;
@@ -23,8 +26,10 @@ public enum Compat {
     public final String modid;
     public final boolean isLoaded;
 
+    @Nullable
     @Getter
     private PropertyProvider extractor;
+    @Nonnull
     private final Class<? extends PropertyProvider> providerFactory;
 
     Compat(final String modid, final Class<? extends PropertyProvider> providerFactory) {
@@ -33,7 +38,8 @@ public enum Compat {
         this.providerFactory = providerFactory;
     }
 
-    private static <T extends PropertyProvider> PropertyProvider create(final Class<T> clazz) {
+    @Nullable
+    private static <T extends PropertyProvider> PropertyProvider create(@Nonnull final Class<T> clazz) {
         try {
             return clazz.getDeclaredConstructor()
                 .newInstance();

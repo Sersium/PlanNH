@@ -3,7 +3,7 @@ package com.sbancuz.plannh.gui;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jetbrains.annotations.NotNull;
+import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -26,7 +26,9 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 
 public class FlowchartScreen extends ModularScreen {
 
+    @Nonnull
     public final Graph graph;
+    @Nonnull
     public final CanvasWidget canvas;
 
     private FlowchartScreen(final ModularPanel panel, final Graph graph, final CanvasWidget canvas) {
@@ -219,7 +221,7 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         @Override
-        public @NotNull Result onMousePressed(final int mouseButton) {
+        public @Nonnull Result onMousePressed(final int mouseButton) {
             if (mouseButton != 0) return Result.IGNORE;
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
@@ -465,7 +467,7 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         @Override
-        public @NotNull Result onMousePressed(final int mouseButton) {
+        public @Nonnull Result onMousePressed(final int mouseButton) {
             if (mouseButton != 0) return Result.IGNORE;
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();

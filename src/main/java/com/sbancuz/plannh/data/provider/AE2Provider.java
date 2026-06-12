@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -26,6 +29,7 @@ public class AE2Provider implements PropertyProvider {
         .intProperty("ae2.energyCost", "Energy Cost", 0);
 
     @Override
+    @Nonnull
     public String getModId() {
         return Compat.AE2.modid;
     }
@@ -44,12 +48,14 @@ public class AE2Provider implements PropertyProvider {
     }
 
     @Override
+    @Nullable
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof TemplateRecipeHandler)) return null;
         return "grindstone".equals(handler.getOverlayIdentifier()) ? "ae2:basic" : null;
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
@@ -75,6 +81,7 @@ public class AE2Provider implements PropertyProvider {
         return props;
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);

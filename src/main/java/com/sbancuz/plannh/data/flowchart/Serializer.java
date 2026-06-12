@@ -12,6 +12,8 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -41,6 +43,7 @@ public final class Serializer {
     // ── Public API ──
 
     /** Encodes a full graph to a compressed base64 string (gzip + json + base64). */
+    @Nonnull
     public static String encode(final Graph graph) {
         try {
             final String json = GSON.toJson(graphToJson(graph));
@@ -57,6 +60,7 @@ public final class Serializer {
     }
 
     /** Decodes a compressed base64 string back to a Graph. */
+    @Nonnull
     public static Graph decode(final String data) {
         try {
             final byte[] bytes = Base64.getDecoder()
@@ -81,6 +85,7 @@ public final class Serializer {
     // ── SlotSet serialization ──
 
     /** Encodes a SlotSet (with all its graphs) to a JSON string. */
+    @Nonnull
     public static String encode(final SlotSet set) {
         final JsonObject root = new JsonObject();
         root.addProperty("active", set.activeSlot);
@@ -99,6 +104,7 @@ public final class Serializer {
     }
 
     /** Decodes a SlotSet (with all its graphs) from a JSON string. */
+    @Nonnull
     public static SlotSet decodeSlotSet(final String json) {
         final JsonObject root = GSON.fromJson(json, JsonObject.class);
         final SlotSet set = new SlotSet();
@@ -124,6 +130,7 @@ public final class Serializer {
     }
 
     /** Renders a graph as a Mermaid.js flowchart (LR layout). */
+    @Nonnull
     public static String toMermaid(final Graph graph) {
         final StringBuilder sb = new StringBuilder();
         sb.append("flowchart LR\n");
@@ -165,11 +172,14 @@ public final class Serializer {
         return sb.toString();
     }
 
+    @Nonnull
     private static JsonObject graphToJson(final Graph graph) {
         final JsonObject root = new JsonObject();
 
-        root.addProperty("balanceMode", graph.getBalanceMode()
-            .name());
+        root.addProperty(
+            "balanceMode",
+            graph.getBalanceMode()
+                .name());
 
         final JsonArray nodesArray = new JsonArray();
         for (final Node node : graph.getNodes()) {
@@ -250,15 +260,17 @@ public final class Serializer {
         return root;
     }
 
+    @Nonnull
     private static Graph jsonToGraph(final JsonObject root) {
         final Graph graph = new Graph();
 
         if (root.has("balanceMode")) {
             try {
-                graph.setBalanceMode(BalanceMode.valueOf(root.get("balanceMode")
-                    .getAsString()));
-            } catch (final IllegalArgumentException ignored) {
-            }
+                graph.setBalanceMode(
+                    BalanceMode.valueOf(
+                        root.get("balanceMode")
+                            .getAsString()));
+            } catch (final IllegalArgumentException ignored) {}
         }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
@@ -382,6 +394,7 @@ public final class Serializer {
 
     // ── Item / Fluid stack helpers ──
 
+    @Nonnull
     private static JsonArray itemStackArrayToJson(final List<ObjectFloatImmutablePair<ItemStack>> stacks) {
         final JsonArray arr = new JsonArray();
         for (final var pair : stacks) {
@@ -433,6 +446,7 @@ public final class Serializer {
         }
     }
 
+    @Nonnull
     private static JsonArray fluidStackArrayToJson(final List<ObjectFloatImmutablePair<FluidStack>> fluids) {
         final JsonArray arr = new JsonArray();
         for (final var pair : fluids) {
@@ -466,6 +480,7 @@ public final class Serializer {
 
     // ── Machine config ──
 
+    @Nonnull
     private static JsonObject machineConfigToJson(final MachineConfig cfg) {
         final JsonObject obj = new JsonObject();
         final MachineProfile profile = cfg.getProfile();
@@ -529,6 +544,7 @@ public final class Serializer {
 
     // ── Multiplier helpers ──
 
+    @Nonnull
     private static JsonArray multiplierArrayToJson(final Map<Integer, Float> map) {
         final JsonArray arr = new JsonArray();
         for (final Map.Entry<Integer, Float> e : map.entrySet()) {
@@ -566,17 +582,20 @@ public final class Serializer {
 
     // ── Mermaid helpers ──
 
+    @Nonnull
     private static String mermaidId(final UUID uuid) {
         return "n" + uuid.toString()
             .replace("-", "")
             .substring(0, 8);
     }
 
+    @Nonnull
     private static String escapeMermaid(final String s) {
         return s.replace("\"", "#quot;")
             .replace("\n", "<br/>");
     }
 
+    @Nonnull
     private static String edgeLabel(final Graph graph, final Edge edge) {
         final Node src = graph.nodes.get(edge.sourceNodeId);
         if (src == null) return "";

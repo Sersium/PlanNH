@@ -43,12 +43,6 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     @Override
-    public boolean canFillCraftingGrid(final GuiContainer firstGui, final IRecipeHandler handler,
-        final int recipeIndex) {
-        return true;
-    }
-
-    @Override
     public boolean craft(final GuiContainer firstGui, final IRecipeHandler recipe, final int recipeIndex,
         final int multiplier) {
         for (final PropertyProvider provider : RecipePropertyAPI.getExtractors()) {

@@ -1,8 +1,8 @@
 package com.sbancuz.plannh.gui;
 
-import net.minecraft.client.Minecraft;
+import javax.annotation.Nonnull;
 
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.client.Minecraft;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -51,8 +51,10 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         }
     }
 
+    @Nonnull
     @Getter
     private final Group group;
+    @Nonnull
     private final CanvasWidget canvas;
 
     private boolean dragging = false;
@@ -136,7 +138,7 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         final String collapseIcon = group.collapsed ? "\u25b6" : "\u25bc";
         GuiDraw.drawText(collapseIcon, zq(4), zq(4), z, PlannhColors.TEXT_LIGHT.getColor(), false);
 
-        drawTitle(pw, hh, titleCol, z);
+        drawTitle(pw, z);
 
         final int ss = zq(SWATCH_W);
         final int sh = Math.round(10 * z);
@@ -161,12 +163,12 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         }
     }
 
-    private void drawTitle(final int pw, final int hh, final int titleCol, final float z) {
+    private void drawTitle(final int pw, final float zoom) {
         if (group.collapsed) return;
 
-        final int titleX = Math.round((COLLAPSE_W + 4) * z);
-        final int swatchW = Math.round(SWATCH_W * z);
-        final int maxTitleW = pw - titleX - swatchW - zq(4) - Math.round((CLOSE_W + 6) * z);
+        final int titleX = Math.round((COLLAPSE_W + 4) * zoom);
+        final int swatchW = Math.round(SWATCH_W * zoom);
+        final int maxTitleW = pw - titleX - swatchW - zq(4) - Math.round((CLOSE_W + 6) * zoom);
 
         if (editing) {
             final String display = group.title.substring(0, Math.min(cursorPos, group.title.length()));
@@ -174,41 +176,42 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
             final String cursor = blink ? "|" : " ";
             String editText = display + cursor + group.title.substring(Math.min(cursorPos, group.title.length()));
 
-            if (Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(editText) * z) > maxTitleW) {
+            if (Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(editText) * zoom) > maxTitleW) {
                 final int maxChars = Math
-                    .max(1, (int) (maxTitleW / (Minecraft.getMinecraft().fontRenderer.getStringWidth("W") * z)));
+                    .max(1, (int) (maxTitleW / (Minecraft.getMinecraft().fontRenderer.getStringWidth("W") * zoom)));
                 if (editText.length() > maxChars) {
                     editText = editText.substring(editText.length() - maxChars);
                 }
             }
-            GuiDraw.drawText(editText, titleX, zq(4), z, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText(editText, titleX, zq(4), zoom, PlannhColors.TEXT_WHITE.getColor(), false);
         } else {
             String displayTitle = group.title;
             final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle);
-            if (Math.round(titleW * z) > maxTitleW) {
+            if (Math.round(titleW * zoom) > maxTitleW) {
                 while (!displayTitle.isEmpty()
-                    && Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle) * z) > maxTitleW) {
+                    && Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle) * zoom)
+                        > maxTitleW) {
                     displayTitle = displayTitle.substring(0, displayTitle.length() - 1);
                 }
                 displayTitle += "\u2026";
             }
-            GuiDraw.drawText(displayTitle, titleX, zq(4), z, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText(displayTitle, titleX, zq(4), zoom, PlannhColors.TEXT_WHITE.getColor(), false);
 
             final int badgeX = titleX
-                + Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle) * z)
+                + Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle) * zoom)
                 + zq(6);
             GuiDraw.drawText(
                 "(" + group.nodeIds.size() + ")",
                 badgeX,
                 zq(4),
-                z * 0.8f,
+                zoom * 0.8f,
                 PlannhColors.TEXT_MUTED.getColor(),
                 false);
         }
     }
 
     @Override
-    public @NotNull Result onMousePressed(final int mouseButton) {
+    public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton != 0) return Result.IGNORE;
         final float z = canvas.getZoom();
         final int mx = getContext().getMouseX();

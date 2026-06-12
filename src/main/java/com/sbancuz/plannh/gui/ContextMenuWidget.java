@@ -2,9 +2,9 @@ package com.sbancuz.plannh.gui;
 
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
+import javax.annotation.Nonnull;
 
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.client.Minecraft;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -20,7 +20,9 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
 
     public record MenuItem(String label, Runnable action) {}
 
+    @Nonnull
     private final List<MenuItem> items;
+    @Nonnull
     private final CanvasWidget canvas;
 
     public ContextMenuWidget(final CanvasWidget canvas, final List<MenuItem> items, final int x, final int y) {
@@ -56,7 +58,7 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
     }
 
     @Override
-    public @NotNull Result onMousePressed(final int mouseButton) {
+    public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton == 0) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();

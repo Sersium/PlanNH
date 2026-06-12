@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraftforge.fluids.FluidStack;
@@ -23,22 +26,31 @@ import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class Node {
 
+    @Nonnull
     public final UUID id;
     public int x;
     public int y;
 
     /// These fields also store their resource consumption percentage
+    @Nonnull
     public final List<ObjectFloatImmutablePair<ItemStack>> inputs;
+    @Nonnull
     public final List<ObjectFloatImmutablePair<ItemStack>> outputs;
+    @Nonnull
     public final List<ObjectFloatImmutablePair<FluidStack>> fluidInputs = new ArrayList<>();
+    @Nonnull
     public final List<ObjectFloatImmutablePair<FluidStack>> fluidOutputs = new ArrayList<>();
 
+    @Nullable
     public String machineName;
     public int durationTicks;
+    @Nullable
     public Recipe.RecipeId recipeId;
     public int handlerRecipeIndex;
+    @Nonnull
     public final MachineConfig machineConfig = new MachineConfig();
 
+    @Nonnull
     public final ExtractedProperties properties = new ExtractedProperties();
 
     public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {

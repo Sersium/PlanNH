@@ -7,8 +7,7 @@ import java.util.List;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 
-public enum RecipePropertyAPI {
-    ;
+public final class RecipePropertyAPI {
 
     private static final List<RecipeProperty<?>> properties = new ArrayList<>();
     private static final List<PropertyProvider> extractors = new ArrayList<>();

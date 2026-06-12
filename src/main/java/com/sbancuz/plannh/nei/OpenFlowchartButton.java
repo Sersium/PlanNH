@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.nei;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiInventory;
@@ -16,6 +18,7 @@ public class OpenFlowchartButton extends Button {
         super("FC");
     }
 
+    @Nullable
     private GuiScreen previousScreen = null;
 
     @Override

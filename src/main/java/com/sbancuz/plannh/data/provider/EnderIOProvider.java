@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -29,9 +32,11 @@ public class EnderIOProvider implements PropertyProvider {
     public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", "RF Total", 0);
     public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", "Experience", 0);
 
+    @Nullable
     private static Field MILL_OUTPUT_CHANCE;
 
     @Override
+    @Nonnull
     public String getModId() {
         return Compat.ENDERIO.modid;
     }
@@ -58,6 +63,7 @@ public class EnderIOProvider implements PropertyProvider {
     }
 
     @Override
+    @Nullable
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof TemplateRecipeHandler)) return null;
         final String overlay = handler.getOverlayIdentifier();
@@ -66,6 +72,7 @@ public class EnderIOProvider implements PropertyProvider {
     }
 
     @Override
+    @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
@@ -104,6 +111,7 @@ public class EnderIOProvider implements PropertyProvider {
         return props;
     }
 
+    @Nonnull
     private static MachineProfile.EffectResult enderIOEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);

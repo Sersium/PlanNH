@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
@@ -28,11 +31,13 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         }
 
         @SuppressWarnings("unchecked")
+        @Nullable
         public <T> T get(final RecipeProperty<T> prop) {
             return (T) properties.get(prop);
         }
     }
 
+    @Nonnull
     public static Builder builder(final String id, final String displayName) {
         return new Builder(id, displayName);
     }
@@ -42,7 +47,7 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private final String id;
         private final String displayName;
         private final List<SettingDef<?>> settings = new ArrayList<>();
-        private EffectComputer effectComputer;
+        private EffectComputer effectComputer = (s, ctx) -> new EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), 1);
 
         private Builder(final String id, final String displayName) {
             this.id = id;
@@ -95,6 +100,7 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
             return this;
         }
 
+        @Nonnull
         public MachineProfile build() {
             return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer);
         }
@@ -115,7 +121,7 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         return v instanceof final String str ? str : def;
     }
 
-    public static long tierNameToVoltage(final String name) {
+    public static long tierNameToVoltage(@Nullable final String name) {
         if (name == null || name.equals("OFF")) return 0;
         final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
             "UXV", "MAX" };
@@ -123,13 +129,5 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
             if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
         }
         return 0;
-    }
-
-    public static String voltageToTierName(final long voltage) {
-        if (voltage <= 0) return "";
-        final int tier = (int) Math.round(Math.log(voltage / 8.0) / Math.log(4));
-        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
-            "UXV", "MAX" };
-        return tier >= 0 && tier < names.length ? names[tier] : "T" + tier;
     }
 }
