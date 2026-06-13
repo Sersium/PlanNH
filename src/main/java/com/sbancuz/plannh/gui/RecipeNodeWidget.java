@@ -360,7 +360,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
         for (int i = 0; i < node.fluidOutputs.size(); i++) {
             final int py = portTopY(i, node.outputs.size()) - half;
-            if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
+            if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE))
+                return node.outputs.size() + i;
         }
         return -1;
     }
@@ -373,7 +374,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
         for (int i = 0; i < node.fluidInputs.size(); i++) {
             final int py = portTopY(i, node.inputs.size()) - half;
-            if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
+            if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return node.inputs.size() + i;
         }
         return -1;
     }
@@ -610,6 +611,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private void drawConfigContent() {
         configZones.clear();
         if (!configOpen) return;
+        assert neiWidget != null;
 
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
